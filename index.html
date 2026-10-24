@@ -199,6 +199,8 @@
         .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 30px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
         .hidden { display: none !important; }
 
+        #audioContainer { display: none; }
+
         /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 12px; }
         .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
@@ -279,6 +281,9 @@
     </div>
 </div>
 
+<!-- Hidden container for playing active video audio persistently -->
+<div id="audioContainer"></div>
+
 <!-- Modal -->
 <div id="levelModal" class="modal-overlay hidden" onclick="closeModalOnBg(event)">
     <div class="modal-card" id="levelModalContent"></div>
@@ -306,6 +311,7 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
+    let activeAudioLevelId = null;
 
     function setDynamicBackground(url) {
         document.body.style.backgroundImage = `url('${url}')`;
@@ -342,7 +348,6 @@
         }
     }
 
-    // Updated with IDs: 10565740, 95355264, and 60284098
     const UPLOADED_VIDEO_IDS = ["10565740", "95355264", "60284098"]; 
 
     function getLevelMedia(lvl) {
@@ -359,6 +364,25 @@
         }
         
         return { src: thumbUrl, thumb: thumbUrl, isVideo: false };
+    }
+
+    function playLevelVideoAudio(lvl, media) {
+        const strId = String(lvl.id);
+        if (!media.isVideo) return;
+        if (activeAudioLevelId === strId) return; // Keep persistent audio playing if already active
+
+        activeAudioLevelId = strId;
+        const audioDiv = document.getElementById('audioContainer');
+        audioDiv.innerHTML = `<video autoplay src="${media.src}"></video>`;
+        const vidAudio = audioDiv.querySelector('video');
+        if (vidAudio) {
+            // Sync with list card video time if available
+            const listVid = document.getElementById(`vid-${strId}`);
+            if (listVid) {
+                vidAudio.currentTime = listVid.currentTime;
+            }
+            vidAudio.play().catch(err => console.log("Video audio autoplay restricted:", err));
+        }
     }
 
     async function loadCloudData() {
@@ -415,6 +439,9 @@
 
     function switchView(viewName) {
         appState.currentView = viewName;
+        activeAudioLevelId = null;
+        document.getElementById('audioContainer').innerHTML = '';
+
         document.getElementById('tabMain').classList.toggle('active', viewName === 'main');
         document.getElementById('tabStats').classList.toggle('active', viewName === 'stats');
         document.getElementById('tabAccount').classList.toggle('active', viewName === 'account');
@@ -652,18 +679,31 @@
 
     function openLevelModal(levelId) {
         appState.activeModalLevelId = String(levelId);
+        const lvl = appState.levels.find(l => String(l.id) === String(levelId));
+        if (lvl) {
+            const media = getLevelMedia(lvl);
+            playLevelVideoAudio(lvl, media);
+        }
+        
         renderModalContent(appState.activeModalLevelId);
         document.getElementById('levelModal').classList.remove('hidden');
 
-        // Instantly sync modal video playback time to match list card video time so there's zero desync
-        setTimeout(() => {
-            const listVid = document.getElementById(`vid-${levelId}`);
-            const modalVid = document.getElementById(`modal-vid-${levelId}`);
-            if (listVid && modalVid) {
+        // Perfect sync: Restart list video AND modal video simultaneously, accounting for load lag
+        const listVid = document.getElementById(`vid-${levelId}`);
+        if (listVid) {
+            listVid.currentTime = 0;
+            listVid.play().catch(e => {});
+        }
+
+        const modalVid = document.getElementById(`modal-vid-${levelId}`);
+        if (modalVid && listVid) {
+            modalVid.currentTime = 0;
+            modalVid.oncanplaythrough = () => {
                 modalVid.currentTime = listVid.currentTime;
                 modalVid.play().catch(e => {});
-            }
-        }, 50);
+                modalVid.oncanplaythrough = null; // run once
+            };
+        }
     }
 
     function closeLevelModal() {
@@ -714,7 +754,6 @@
         const isBeatenByMe = isBeatenByActiveUser(lvl.id);
         const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon', true);
 
-        // Audio is unmuted on the modal page as requested
         const mediaHtml = media.isVideo 
             ? `<video id="modal-vid-${lvl.id}" class="modal-hero" src="${media.src}" autoplay loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {src: '${media.thumb}'}));"></video>`
             : `<img src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
@@ -853,7 +892,7 @@
                         <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
-                            <span class="badge badge-points">${pts.toFixed(2)} pts</span>
+                            <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                         </div>
                     </div>
                 </article>
