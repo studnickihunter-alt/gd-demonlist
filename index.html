@@ -62,7 +62,24 @@
         .brand span { color: #4dabf7; font-weight: 400; font-size: 0.8rem; display: none; }
         @media(min-width: 600px) { .brand span { display: inline; } }
 
-        .nav-tabs { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+        .nav-tabs-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .nav-tabs { display: flex; gap: 4px; align-items: center; }
+        
+        /* Filter Dropdown next to Main List tab */
+        .filter-dropdown-wrapper { position: relative; display: inline-block; }
+        .filter-dropdown-btn {
+            background: #343a40; color: #fff; border: 1px solid var(--border);
+            padding: 6px 10px; font-size: 0.75rem; border-radius: 4px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+        }
+        .filter-dropdown-btn:hover { background: #495057; }
+        .filter-dropdown-content {
+            display: none; position: absolute; left: 0; background-color: var(--bg-card);
+            min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 200;
+            border: 1px solid var(--border); border-radius: 4px; padding: 10px;
+        }
+        .filter-dropdown-content.show { display: block; }
+        .filter-checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; padding: 4px 0; color: var(--text-main); cursor: pointer; font-weight: 600; }
+
         .tab-btn {
             background: transparent; color: #adb5bd; border: none; padding: 6px 10px;
             font-weight: 700; font-size: 0.7rem; text-transform: uppercase; cursor: pointer;
@@ -71,21 +88,6 @@
         @media(min-width: 600px) { .tab-btn { padding: 8px 14px; font-size: 0.8rem; } }
         .tab-btn:hover { color: #fff; }
         .tab-btn.active { color: #fff; border-bottom-color: #4dabf7; }
-
-        /* Filter Dropdown in Header */
-        .filter-dropdown-wrapper { position: relative; display: inline-block; }
-        .filter-dropdown-btn {
-            background: #343a40; color: #fff; border: 1px solid var(--border);
-            padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: 700; cursor: pointer;
-        }
-        .filter-dropdown-btn:hover { background: #495057; }
-        .filter-dropdown-content {
-            display: none; position: absolute; right: 0; background-color: var(--bg-card);
-            min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 200;
-            border: 1px solid var(--border); border-radius: 4px; padding: 8px;
-        }
-        .filter-dropdown-content.show { display: block; }
-        .filter-checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; padding: 4px 0; color: var(--text-main); cursor: pointer; }
 
         select, input, button {
             padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border);
@@ -130,7 +132,7 @@
             display: flex; flex-direction: column; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s;
             position: relative; border: 1px solid var(--border);
         }
-        @media (min-width: 650px) { .level-card { flex-direction: row; min-height: 140px; } }
+        @media (min-width: 650px) { .level-card { flex-direction: row; min-height: 120px; } }
         .level-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
 
         .level-card.rank-1 { background: linear-gradient(135deg, #fff5b8 0%, #ffdf6b 100%); }
@@ -143,10 +145,10 @@
             box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
         }
 
-        /* Enforce exact 16:9 responsive aspect ratio container to match native video sizing perfectly across mobile and desktop */
+        /* Slightly shorter video preview height */
         .level-thumb-wrapper {
             width: 100%;
-            aspect-ratio: 16 / 9;
+            height: 160px;
             position: relative;
             background-color: #000;
             overflow: hidden;
@@ -154,10 +156,9 @@
         }
         @media (min-width: 650px) {
             .level-thumb-wrapper {
-                width: 250px;
-                min-width: 250px;
-                height: 140px;
-                aspect-ratio: auto;
+                width: 220px;
+                min-width: 220px;
+                height: 120px;
             }
         }
         .level-thumb, .level-video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
@@ -249,21 +250,27 @@
 <body id="pageBody" onmousemove="checkBackgroundReset(event)">
 
 <header>
-    <div class="brand" style="display: flex; align-items: center; gap: 15px;">
-        <span>STUDMERLIST</span>
-        <!-- Player Filter Dropdown next to Main List title context -->
-        <div class="filter-dropdown-wrapper">
-            <button class="filter-dropdown-btn" onclick="toggleFilterDropdown(event)">Filter Victors ▼</button>
-            <div id="filterDropdownContent" class="filter-dropdown-content" onclick="event.stopPropagation()">
-                <div style="font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">Show if completed by:</div>
-                <div id="playerCheckboxesContainer"></div>
+    <div class="brand">STUDMERLIST</div>
+    <div class="nav-tabs-container">
+        <div class="nav-tabs">
+            <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main List</button>
+            
+            <!-- Filter Dropdown placed right next to Main List tab -->
+            <div class="filter-dropdown-wrapper">
+                <button class="filter-dropdown-btn" onclick="toggleFilterDropdown(event)">Filter Victors ▼</button>
+                <div id="filterDropdownContent" class="filter-dropdown-content" onclick="event.stopPropagation()">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">
+                        <span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted);">Select Accounts:</span>
+                        <span style="font-size: 0.655rem; color: var(--accent); cursor: pointer; font-weight: 700;" onclick="toggleAllFilters(true)">All</span> | 
+                        <span style="font-size: 0.65rem; color: var(--danger); cursor: pointer; font-weight: 700;" onclick="toggleAllFilters(false)">None</span>
+                    </div>
+                    <div id="playerCheckboxesContainer"></div>
+                </div>
             </div>
+
+            <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Profiles</button>
+            <button id="tabAccount" class="tab-btn" onclick="switchView('account')">Account</button>
         </div>
-    </div>
-    <div class="nav-tabs">
-        <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main List</button>
-        <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Profiles</button>
-        <button id="tabAccount" class="tab-btn" onclick="switchView('account')">Account</button>
     </div>
 </header>
 
@@ -327,7 +334,7 @@
         theme: 'light',
         currentView: 'main',
         viewingPlayer: null,
-        selectedFilterPlayers: [], // Stores players selected in the filter dropdown
+        selectedFilterPlayers: null, // null means uninitialized (all start selected)
         levels: [],
         players: {}
     };
@@ -348,7 +355,6 @@
         document.getElementById('filterDropdownContent').classList.toggle('show');
     }
 
-    // Close dropdown when clicking outside
     window.onclick = function(event) {
         if (!event.target.matches('.filter-dropdown-btn') && !event.target.closest('.filter-dropdown-content')) {
             const dropdown = document.getElementById('filterDropdownContent');
@@ -358,7 +364,22 @@
         }
     }
 
+    function initFilterPlayersIfNeeded() {
+        const allPlayerNames = Object.keys(appState.players);
+        if (appState.selectedFilterPlayers === null) {
+            appState.selectedFilterPlayers = [...allPlayerNames];
+        } else {
+            // Ensure any newly registered accounts are included by default
+            allPlayerNames.forEach(name => {
+                if (!appState.selectedFilterPlayers.includes(name)) {
+                    appState.selectedFilterPlayers.push(name);
+                }
+            });
+        }
+    }
+
     function handleFilterPlayerToggle(playerName, isChecked) {
+        initFilterPlayersIfNeeded();
         if (isChecked) {
             if (!appState.selectedFilterPlayers.includes(playerName)) {
                 appState.selectedFilterPlayers.push(playerName);
@@ -369,11 +390,20 @@
         renderMainList();
     }
 
+    function toggleAllFilters(selectVal) {
+        const allPlayerNames = Object.keys(appState.players);
+        appState.selectedFilterPlayers = selectVal ? [...allPlayerNames] : [];
+        renderFilterCheckboxes();
+        renderMainList();
+    }
+
     function renderFilterCheckboxes() {
         const container = document.getElementById('playerCheckboxesContainer');
         const allPlayers = Object.keys(appState.players);
+        initFilterPlayersIfNeeded();
+
         if (allPlayers.length === 0) {
-            container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No players found</div>`;
+            container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No accounts found</div>`;
             return;
         }
 
@@ -426,7 +456,7 @@
         }
     }
 
-    // Fully restarts both video and audio from 0 seconds on click/tap
+    // Fully restarts both video and audio from 0 seconds on click/tap for ANY tab/list view
     function restartVideo(vidId, event) {
         event.stopPropagation();
         const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
@@ -480,7 +510,6 @@
         
         if (!appState.players) appState.players = {};
         if (!appState.levels) appState.levels = [];
-        if (!appState.selectedFilterPlayers) appState.selectedFilterPlayers = [];
 
         SPECIAL_LEVELS.forEach(sp => {
             if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
@@ -492,6 +521,8 @@
         if (names.length > 0 && !appState.viewingPlayer) {
             appState.viewingPlayer = names[0];
         }
+
+        initFilterPlayersIfNeeded();
 
         document.documentElement.setAttribute('data-theme', appState.theme || 'light');
         purgeUnusedLevels();
@@ -861,17 +892,21 @@
         const container = document.getElementById('mainLevelsList');
         let list = appState.levels;
 
-        // Apply player selection filter dropdown if any players are checked
-        if (appState.selectedFilterPlayers && appState.selectedFilterPlayers.length > 0) {
+        initFilterPlayersIfNeeded();
+
+        // New filter logic: A level appears if at least ONE of the selected filter accounts has completed it.
+        // It only vanishes if all of its victors are unselected (or if it has no victors and filters are active).
+        if (appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
-                // Level is included only if ALL selected filter players have completed it
-                return appState.selectedFilterPlayers.every(fp => victors.includes(fp));
+                if (victors.length === 0) return false; // If level has no victors, it's hidden under custom filters
+                // Check if at least one victor is in the selected filter array
+                return victors.some(v => appState.selectedFilterPlayers.includes(v));
             });
         }
 
         if (list.length === 0) {
-            container.innerHTML = `<div class="empty-state"><h3>No Levels Match Filter</h3><p style="margin-top:6px;">Try selecting different players or clear the filter.</p></div>`;
+            container.innerHTML = `<div class="empty-state"><h3>No Levels Match Filter</h3><p style="margin-top:6px;">Try selecting different accounts from the filter dropdown.</p></div>`;
             return;
         }
 
