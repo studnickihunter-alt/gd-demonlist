@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shared Custom Demonlist & Stats</title>
+    <title>Custom Demonlist & Stats Viewer</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -42,22 +42,24 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 5%;
+            padding: 0 4%;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 1.35rem; text-transform: uppercase; }
-        .brand span { color: #4dabf7; font-weight: 400; font-size: 0.9rem; }
-        .nav-tabs { display: flex; gap: 8px; align-items: center; }
+        .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; text-transform: uppercase; }
+        .brand span { color: #4dabf7; font-weight: 400; font-size: 0.8rem; display: none; }
+        @media(min-width: 600px) { .brand span { display: inline; } }
 
+        .nav-tabs { display: flex; gap: 6px; align-items: center; }
         .tab-btn {
-            background: transparent; color: #adb5bd; border: none; padding: 8px 16px;
-            font-weight: 700; font-size: 0.85rem; text-transform: uppercase; cursor: pointer;
-            border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s;
+            background: transparent; color: #adb5bd; border: none; padding: 6px 10px;
+            font-weight: 700; font-size: 0.75rem; text-transform: uppercase; cursor: pointer;
+            border-bottom: 3px solid transparent; transition: color 0.15s;
         }
+        @media(min-width: 600px) { .tab-btn { padding: 8px 16px; font-size: 0.85rem; } }
         .tab-btn:hover { color: #fff; }
         .tab-btn.active { color: #fff; border-bottom-color: #4dabf7; }
 
@@ -73,27 +75,32 @@
         .btn-danger:hover { background-color: #bd2130; }
 
         .container {
-            max-width: 1180px; margin: 30px auto; padding: 0 20px;
-            display: grid; grid-template-columns: 1fr 340px; gap: 28px;
+            max-width: 1180px; margin: 20px auto; padding: 0 12px;
+            display: grid; grid-template-columns: 1fr; gap: 20px;
         }
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        @media (min-width: 900px) {
+            .container { grid-template-columns: 1fr 340px; margin: 30px auto; padding: 0 20px; gap: 28px; }
+        }
 
-        .list-container { display: flex; flex-direction: column; gap: 16px; }
+        .list-container { display: flex; flex-direction: column; gap: 14px; }
         .list-banner {
-            background-color: var(--bg-card); padding: 20px 24px; border-radius: 4px;
+            background-color: var(--bg-card); padding: 16px 20px; border-radius: 4px;
             box-shadow: var(--shadow); border-left: 5px solid var(--accent);
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
         }
-        .list-banner h1 { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; }
+        .list-banner h1 { font-size: 1.25rem; font-weight: 800; text-transform: uppercase; }
+        @media(min-width: 600px) { .list-banner h1 { font-size: 1.5rem; } }
 
         .level-card {
             background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow);
-            display: flex; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s;
-            position: relative; min-height: 128px; border: 1px solid var(--border); cursor: pointer;
+            display: flex; flex-direction: column; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s;
+            position: relative; border: 1px solid var(--border); cursor: pointer;
         }
+        @media (min-width: 650px) { .level-card { flex-direction: row; min-height: 120px; } }
         .level-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
 
-        .level-thumb-wrapper { width: 225px; min-width: 225px; position: relative; background-color: #000; overflow: hidden; }
+        .level-thumb-wrapper { width: 100%; height: 140px; position: relative; background-color: #000; overflow: hidden; }
+        @media (min-width: 650px) { .level-thumb-wrapper { width: 225px; min-width: 225px; height: auto; } }
         .level-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .level-id-badge {
@@ -101,68 +108,75 @@
             color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 6px; border-radius: 3px;
         }
 
-        .level-content { padding: 14px 20px; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
-        .level-title-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-        .level-rank { font-size: 1.45rem; font-weight: 800; }
-        .level-name { font-size: 1.35rem; font-weight: 800; color: var(--accent); text-decoration: none; }
-        .level-card:hover .level-name { text-decoration: underline; }
-        .level-creator { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
+        .level-content { padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
+        @media(min-width: 650px) { .level-content { padding: 14px 20px; } }
 
-        .victors-row { margin-top: 6px; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.72rem; }
+        .level-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .level-rank { font-size: 1.25rem; font-weight: 800; }
+        @media(min-width: 650px) { .level-rank { font-size: 1.45rem; } }
+        .level-name { font-size: 1.15rem; font-weight: 800; color: var(--accent); text-decoration: none; }
+        @media(min-width: 650px) { .level-name { font-size: 1.35rem; } }
+        .level-card:hover .level-name { text-decoration: underline; }
+        .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
+
+        .victors-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
-            padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; cursor: pointer;
+            padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
         }
         [data-theme="dark"] .victor-tag { background-color: rgba(64, 192, 87, 0.18); color: #69db7c; }
+        .victor-tag:hover { text-decoration: underline; }
 
-        .level-meta { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .badge { font-size: 0.75rem; font-weight: 700; padding: 4px 9px; border-radius: 3px; text-transform: uppercase; }
+        .level-meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; }
         .badge-diff { background-color: #343a40; color: #fff; }
         .badge-points { background-color: rgba(0, 102, 204, 0.12); color: var(--accent); }
         .badge-mainrank { background-color: rgba(108, 117, 125, 0.15); color: var(--text-muted); }
 
-        .sidebar { display: flex; flex-direction: column; gap: 20px; }
-        .panel { background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow); padding: 20px; border: 1px solid var(--border); }
-        .panel h2 { font-size: 1rem; font-weight: 800; text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); }
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+        .panel { background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; border: 1px solid var(--border); }
+        @media(min-width: 650px) { .panel { padding: 20px; } }
+        .panel h2 { font-size: 0.95rem; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
 
-        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
-        .form-group label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-        .form-row { display: flex; gap: 8px; }
+        .form-group { margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .form-row { display: flex; gap: 6px; }
         .form-row input { flex: 1; }
 
-        .status-box { font-size: 0.8rem; padding: 10px; border-radius: 4px; margin-top: 8px; display: none; font-weight: 600; }
+        .status-box { font-size: 0.78rem; padding: 8px; border-radius: 4px; margin-top: 6px; display: none; font-weight: 600; }
         .status-loading { display: block; background-color: rgba(77, 171, 247, 0.15); color: var(--accent); }
+
+        .auth-bar { background-color: var(--bg-body); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 12px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
 
         .leaderboard-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 4px;
+            padding: 8px 10px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 4px;
         }
         .leaderboard-item:hover { background-color: rgba(0, 102, 204, 0.08); }
         .leaderboard-item.active { background-color: rgba(0, 102, 204, 0.15); border-left: 3px solid var(--accent); }
-        .lb-rank-name { font-weight: 700; font-size: 0.9rem; }
-        .lb-pts { font-size: 0.8rem; font-weight: 800; color: var(--accent); }
+        .lb-rank-name { font-weight: 700; font-size: 0.85rem; }
+        .lb-pts { font-size: 0.78rem; font-weight: 800; color: var(--accent); }
 
-        .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 40px 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
+        .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 30px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
         .hidden { display: none !important; }
 
         /* Modal */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 650px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
-        .modal-hero { position: relative; height: 220px; background-color: #000; overflow: hidden; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 12px; }
+        .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+        .modal-hero { position: relative; height: 180px; background-color: #000; overflow: hidden; }
+        @media(min-width: 600px) { .modal-hero { height: 210px; } }
         .modal-hero img { width: 100%; height: 100%; object-fit: cover; opacity: 0.75; }
-        .modal-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 24px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)); color: #fff; }
-        .modal-close { position: absolute; top: 12px; right: 12px; background: rgba(0, 0, 0, 0.65); color: #fff; border: none; width: 34px; height: 34px; border-radius: 50%; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .modal-body { padding: 24px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
-        .stat-box { background-color: var(--bg-body); border: 1px solid var(--border); border-radius: 4px; padding: 12px; text-align: center; }
-        .stat-box .label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
-        .stat-box .value { font-size: 1.05rem; font-weight: 800; }
-        .victors-toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 12px; }
-        .victor-toggle-btn { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background-color: var(--bg-body); color: var(--text-main); border: 2px solid var(--border); border-radius: 4px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-        .victor-toggle-btn.beaten { border-color: var(--success); background-color: rgba(43, 138, 62, 0.14); color: var(--success); }
-        [data-theme="dark"] .victor-toggle-btn.beaten { color: #69db7c; border-color: #40c057; }
-        .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .modal-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)); color: #fff; }
+        .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.65); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .modal-body { padding: 18px; }
+        @media(min-width: 600px) { .modal-body { padding: 24px; } }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        @media(min-width: 500px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+        .stat-box { background-color: var(--bg-body); border: 1px solid var(--border); border-radius: 4px; padding: 10px; text-align: center; }
+        .stat-box .label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+        .stat-box .value { font-size: 0.95rem; font-weight: 800; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -170,9 +184,9 @@
 <header>
     <div class="brand">DEMONLIST <span>CLOUD VIEWER</span></div>
     <div class="nav-tabs">
-        <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main Demonlist</button>
-        <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Player Profiles & Stats</button>
-        <button class="btn-secondary" style="margin-left: 10px;" onclick="toggleTheme()">Theme</button>
+        <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main List</button>
+        <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Profiles</button>
+        <button class="btn-secondary" style="margin-left: 6px; padding: 6px 10px;" onclick="toggleTheme()">Theme</button>
     </div>
 </header>
 
@@ -191,10 +205,6 @@
                     <h1 id="playerProfileTitle">Player Name</h1>
                     <p id="playerProfileStats">0.00 Points • 0 Levels Completed</p>
                 </div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-secondary" onclick="renameCurrentPlayer()">Rename Player</button>
-                    <button class="btn-danger" onclick="deleteCurrentPlayer()">Delete Player</button>
-                </div>
             </div>
             <div id="playerPersonalList" class="list-container"></div>
         </div>
@@ -202,22 +212,26 @@
 
     <!-- RIGHT SIDEBAR -->
     <aside class="sidebar">
+        <!-- Authentication Panel -->
         <div class="panel">
-            <h2>Player Leaderboard</h2>
-            <div class="form-row" style="margin-bottom: 12px;">
-                <input type="text" id="newPlayerInput" placeholder="New player name...">
-                <button onclick="addNewPlayer()">+ Add</button>
-            </div>
+            <h2>Account Session</h2>
+            <div id="authStatusContainer"></div>
+        </div>
+
+        <!-- Player Leaderboard Panel -->
+        <div class="panel">
+            <h2>Player Profiles</h2>
             <div id="leaderboardContainer"></div>
         </div>
 
+        <!-- Add Beaten Level Panel -->
         <div class="panel">
-            <h2>Add Level(s) to Main List</h2>
+            <h2>Add Beaten Level</h2>
             <div class="form-group">
-                <label for="levelIdsInput">Level IDs (comma/space separated)</label>
-                <input type="text" id="levelIdsInput" placeholder="e.g. 10565740, 35448603">
+                <label for="levelIdsInput">Level ID</label>
+                <input type="text" id="levelIdsInput" placeholder="e.g. 10565740">
             </div>
-            <button style="width: 100%;" onclick="fetchAndAddLevels()" id="addBtn">Fetch & Rank Level(s)</button>
+            <button style="width: 100%;" onclick="fetchAndAddLevel()" id="addBtn">Submit Completion</button>
             <div id="statusBox" class="status-box"></div>
         </div>
     </aside>
@@ -229,63 +243,71 @@
 </div>
 
 <script>
-    // REPLACE THESE WITH YOUR JSONBIN.IO DETAILS FOR CLOUD SYNC
+    // JSONBIN CREDENTIALS (REPLACE WITH YOUR KEYS)
     const BIN_ID = '6adc18bcffd5d1605387610c';
     const JSONBIN_API_KEY = '$2a$10$Q4c9o4Yst0RiOqrR7gzl6OrsAcpz87H1seYKYQd2gvk92nuv8fq7e';
 
     let appState = {
         theme: 'light',
         currentView: 'main',
-        selectedPlayer: 'Player 1',
+        viewingPlayer: null,
+        activePlayer: null,
         activeModalLevelId: null,
         levels: [],
-        players: { 'Player 1': [] }
+        players: {} // format: { "PlayerName": { password: "...", completions: ["id1", "id2"] } }
     };
 
     const DIFF_WEIGHTS = { 'Extreme Demon': 25.00, 'Insane Demon': 17.00, 'Hard Demon': 12.00, 'Medium Demon': 7.00, 'Easy Demon': 2.00 };
 
     async function loadCloudData() {
-        if (BIN_ID === 'YOUR_BIN_ID_HERE') {
-            initAppLocally();
-            return;
-        }
-        try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                headers: { 'X-Master-Key': JSONBIN_API_KEY }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                appState = data.record;
+        if (BIN_ID !== 'YOUR_BIN_ID_HERE') {
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.record) appState = data.record;
+                }
+            } catch (e) {
+                console.error("Cloud load error", e);
             }
-        } catch (e) {
-            console.error("Cloud load failed, using fallback", e);
         }
-        initAppLocally();
+        
+        if (!appState.players) appState.players = {};
+        for (let p in appState.players) {
+            if (Array.isArray(appState.players[p])) {
+                appState.players[p] = { password: 'password123', completions: appState.players[p] };
+            }
+        }
+
+        const names = Object.keys(appState.players);
+        if (names.length > 0 && !appState.viewingPlayer) {
+            appState.viewingPlayer = names[0];
+        }
+
+        document.documentElement.setAttribute('data-theme', appState.theme || 'light');
+        purgeUnusedLevels();
+        sortLevelsHardestFirst();
+        renderAll();
     }
 
     async function saveCloudData() {
         document.documentElement.setAttribute('data-theme', appState.theme || 'light');
+        purgeUnusedLevels();
+        sortLevelsHardestFirst();
         renderAll();
 
         if (BIN_ID === 'YOUR_BIN_ID_HERE') return;
         try {
             await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': JSONBIN_API_KEY
-                },
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
                 body: JSON.stringify(appState)
             });
         } catch (e) {
-            console.error("Cloud save failed", e);
+            console.error("Cloud save error", e);
         }
-    }
-
-    function initAppLocally() {
-        document.documentElement.setAttribute('data-theme', appState.theme || 'light');
-        sortLevelsHardestFirst();
-        renderAll();
     }
 
     function toggleTheme() {
@@ -296,9 +318,9 @@
     function switchView(viewName, playerName = null) {
         appState.currentView = viewName;
         if (playerName && appState.players[playerName]) {
-            appState.selectedPlayer = playerName;
-        } else if (!appState.players[appState.selectedPlayer]) {
-            appState.selectedPlayer = Object.keys(appState.players)[0] || '';
+            appState.viewingPlayer = playerName;
+        } else if (!appState.viewingPlayer && Object.keys(appState.players).length > 0) {
+            appState.viewingPlayer = Object.keys(appState.players)[0];
         }
         document.getElementById('tabMain').classList.toggle('active', viewName === 'main');
         document.getElementById('tabStats').classList.toggle('active', viewName === 'stats');
@@ -307,24 +329,82 @@
         renderAll();
     }
 
+    function handleRegister() {
+        const name = prompt("Enter a new username to register:");
+        if (!name || !name.trim()) return;
+        const cleanName = name.trim();
+        if (appState.players[cleanName]) {
+            alert("Username already exists! Please log in.");
+            return;
+        }
+        const pwd = prompt(`Create a secure password for "${cleanName}":`);
+        if (!pwd) return;
+
+        appState.players[cleanName] = { password: pwd, completions: [] };
+        appState.activePlayer = cleanName;
+        appState.viewingPlayer = cleanName;
+        saveCloudData();
+        switchView('stats', cleanName);
+    }
+
+    function handleLogin() {
+        const names = Object.keys(appState.players);
+        if (names.length === 0) {
+            alert("No accounts registered yet. Please register first!");
+            return;
+        }
+        const username = prompt("Enter your account username:\n" + names.join(", "));
+        if (!username || !appState.players[username.trim()]) {
+            if (username) alert("Account not found.");
+            return;
+        }
+        const cleanName = username.trim();
+        const pwd = prompt(`Enter password for "${cleanName}":`);
+        if (pwd === null) return;
+
+        if (appState.players[cleanName].password === pwd) {
+            appState.activePlayer = cleanName;
+            appState.viewingPlayer = cleanName;
+            saveCloudData();
+            switchView('stats', cleanName);
+        } else {
+            alert("Incorrect password!");
+        }
+    }
+
+    function handleLogout() {
+        appState.activePlayer = null;
+        saveCloudData();
+    }
+
+    function purgeUnusedLevels() {
+        appState.levels = appState.levels.filter(lvl => {
+            for (let p in appState.players) {
+                if (appState.players[p].completions.includes(String(lvl.id))) return true;
+            }
+            return false;
+        });
+    }
+
     function getLevelPoints(level) {
         if (level.points !== null && level.points !== undefined && !isNaN(level.points)) return Number(level.points);
         return DIFF_WEIGHTS[level.difficulty] ?? 25.00;
     }
 
     function getPlayerPoints(playerName) {
-        const completedIds = appState.players[playerName] || [];
+        const data = appState.players[playerName];
+        if (!data) return 0;
         let total = 0;
         appState.levels.forEach(lvl => {
-            if (completedIds.includes(String(lvl.id))) total += getLevelPoints(lvl);
+            if (data.completions.includes(String(lvl.id))) total += getLevelPoints(lvl);
         });
         return total;
     }
 
     function getVictorsForLevel(levelId) {
         const victors = [];
-        for (const [player, completedIds] of Object.entries(appState.players)) {
-            if (completedIds.includes(String(levelId))) victors.push(player);
+        for (const [p, data] of Object.entries(appState.players)) {
+            if (data.completions.includes(String(levelId))) victors.push(p);
         }
         return victors;
     }
@@ -340,22 +420,21 @@
         let points = 25.00;
 
         try {
-            // Live HTTPS fetch to GDDL API now works seamlessly on GitHub Pages!
             const res = await fetch(`https://gdladder.com/api/level/${levelId}`);
             if (res.ok) {
-                const gddlData = await res.json();
-                if (gddlData.Rating !== undefined && gddlData.Rating !== null && !isNaN(gddlData.Rating)) {
-                    points = parseFloat(Number(gddlData.Rating).toFixed(2));
+                const data = await res.json();
+                const rawRating = data.rating ?? data.Rating ?? data.tier ?? data.Tier;
+                if (rawRating !== undefined && rawRating !== null && !isNaN(rawRating)) {
+                    points = parseFloat(Number(rawRating).toFixed(2));
                 }
-                if (gddlData.Meta) {
-                    name = gddlData.Meta.Name || name;
-                    creator = gddlData.Meta.Publisher?.name || gddlData.Meta.Creator || creator;
-                    if (gddlData.Meta.Difficulty) difficulty = gddlData.Meta.Difficulty;
+                const meta = data.Meta || data.meta || data;
+                if (meta) {
+                    name = meta.Name || meta.name || name;
+                    creator = meta.Publisher?.name || meta.creator || meta.author || creator;
+                    if (meta.Difficulty || meta.difficulty) difficulty = meta.Difficulty || meta.difficulty;
                 }
             }
-        } catch (e) {
-            console.warn(`GDDL direct lookup failed, fallback to GDBrowser for ${levelId}`);
-        }
+        } catch (e) {}
 
         if (name === `Level ${levelId}` || creator === "Unknown") {
             try {
@@ -374,92 +453,65 @@
         return { id: String(levelId), name, creator, difficulty, points };
     }
 
-    async function fetchAndAddLevels() {
+    async function fetchAndAddLevel() {
+        if (!appState.activePlayer) {
+            alert("You must be logged into an account to submit level completions!");
+            return;
+        }
+
         const input = document.getElementById('levelIdsInput');
         const statusBox = document.getElementById('statusBox');
         const addBtn = document.getElementById('addBtn');
-        const rawIds = input.value.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
-        if (rawIds.length === 0) return;
+        const id = input.value.replace(/\D/g, '').trim();
+        if (!id) return;
 
         addBtn.disabled = true;
         statusBox.className = 'status-box status-loading';
+        statusBox.textContent = `Fetching ID ${id}...`;
 
-        for (let i = 0; i < rawIds.length; i++) {
-            const id = rawIds[i].replace(/\D/g, '');
-            if (!id) continue;
-            statusBox.textContent = `Fetching ID ${id} (${i + 1} of ${rawIds.length})...`;
-            try {
-                const levelObj = await fetchSingleLevelData(id);
-                const existingIndex = appState.levels.findIndex(item => String(item.id) === String(id));
-                if (existingIndex > -1) {
-                    appState.levels[existingIndex] = {
-                        ...levelObj,
-                        points: levelObj.points !== 25.00 ? levelObj.points : (appState.levels[existingIndex].points || 25.00)
-                    };
-                } else {
-                    appState.levels.push(levelObj);
-                }
-            } catch (err) { console.error(err); }
+        try {
+            let levelObj = appState.levels.find(l => String(l.id) === String(id));
+            if (!levelObj) {
+                levelObj = await fetchSingleLevelData(id);
+                appState.levels.push(levelObj);
+            }
+
+            const comps = appState.players[appState.activePlayer].completions;
+            if (!comps.includes(String(id))) {
+                comps.push(String(id));
+            }
+
+            input.value = '';
+            statusBox.style.display = 'none';
+            await saveCloudData();
+        } catch (err) {
+            statusBox.textContent = "Error fetching level data.";
+            console.error(err);
         }
-
-        input.value = '';
         addBtn.disabled = false;
-        statusBox.style.display = 'none';
-
-        sortLevelsHardestFirst();
-        await saveCloudData();
     }
 
-    async function removeLevel(id) {
-        if (!confirm("Remove this level from the Demonlist?")) return;
-        appState.levels = appState.levels.filter(l => String(l.id) !== String(id));
-        for (const player of Object.keys(appState.players)) {
-            appState.players[player] = appState.players[player].filter(lvlId => String(lvlId) !== String(id));
+    async function toggleVictor(levelId) {
+        if (!appState.activePlayer) {
+            alert("You must be logged into an account to add or remove victor records!");
+            return;
         }
-        closeLevelModal();
-        await saveCloudData();
-    }
-
-    async function addNewPlayer() {
-        const input = document.getElementById('newPlayerInput');
-        const name = input.value.trim();
-        if (!name) return;
-        if (appState.players[name]) { alert("A player with that name already exists!"); return; }
-        appState.players[name] = [];
-        input.value = '';
-        switchView('stats', name);
-        await saveCloudData();
-    }
-
-    async function renameCurrentPlayer() {
-        const oldName = appState.selectedPlayer;
-        if (!oldName) return;
-        const newName = prompt(`Rename "${oldName}" to:`, oldName);
-        if (!newName || !newName.trim() || newName.trim() === oldName) return;
-        const clean = newName.trim();
-        if (appState.players[clean]) { alert("A player with that name already exists!"); return; }
-        appState.players[clean] = appState.players[oldName];
-        delete appState.players[oldName];
-        appState.selectedPlayer = clean;
-        await saveCloudData();
-    }
-
-    async function deleteCurrentPlayer() {
-        if (Object.keys(appState.players).length <= 1) { alert("You must have at least one player!"); return; }
-        const name = appState.selectedPlayer;
-        if (!confirm(`Delete player "${name}" and all records?`)) return;
-        delete appState.players[name];
-        appState.selectedPlayer = Object.keys(appState.players)[0];
-        await saveCloudData();
-    }
-
-    async function togglePlayerRecord(playerName, levelId) {
-        const list = appState.players[playerName];
-        if (!list) return;
+        const comps = appState.players[appState.activePlayer].completions;
         const strId = String(levelId);
-        const idx = list.indexOf(strId);
-        if (idx > -1) list.splice(idx, 1);
-        else list.push(strId);
+        const idx = comps.indexOf(strId);
+
+        if (idx > -1) {
+            const pwd = prompt(`Enter password for "${appState.activePlayer}" to remove your victor record:`);
+            if (pwd === null) return;
+            if (appState.players[appState.activePlayer].password === pwd) {
+                comps.splice(idx, 1);
+            } else {
+                alert("Incorrect password! Cannot remove victor status.");
+                return;
+            }
+        } else {
+            comps.push(strId);
+        }
 
         await saveCloudData();
         if (appState.activeModalLevelId) renderModalContent(appState.activeModalLevelId);
@@ -479,47 +531,71 @@
     function closeModalOnBg(event) { if (event.target.id === 'levelModal') closeLevelModal(); }
 
     function renderModalContent(levelId) {
-        const lvlIndex = appState.levels.findIndex(l => String(l.id) === String(levelId));
-        if (lvlIndex === -1) return;
-        const lvl = appState.levels[lvlIndex];
-        const rank = lvlIndex + 1;
+        const lvl = appState.levels.find(l => String(l.id) === String(levelId));
+        if (!lvl) return;
+        const rank = appState.levels.indexOf(lvl) + 1;
         const pts = getLevelPoints(lvl);
         const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
-
-        const playerButtonsHtml = Object.keys(appState.players).map(p => {
-            const hasBeaten = appState.players[p].includes(String(lvl.id));
-            return `<button class="victor-toggle-btn ${hasBeaten ? 'beaten' : ''}" onclick="togglePlayerRecord('${escapeHtml(p)}', '${lvl.id}')"><span>${escapeHtml(p)}</span><span>${hasBeaten ? '✓ Victor' : '+ Add'}</span></button>`;
-        }).join('');
+        const victors = getVictorsForLevel(lvl.id);
+        const isBeatenByMe = appState.activePlayer && appState.players[appState.activePlayer].completions.includes(String(lvl.id));
 
         document.getElementById('levelModalContent').innerHTML = `
             <div class="modal-hero">
                 <img src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
                 <button class="modal-close" onclick="closeLevelModal()">✕</button>
                 <div class="modal-hero-overlay">
-                    <div style="font-size: 1.5rem; font-weight: 800;">#${rank} – ${escapeHtml(lvl.name)}</div>
-                    <div style="font-size: 0.9rem; opacity: 0.85; font-weight: 600;">by ${escapeHtml(lvl.creator)} • ID: ${escapeHtml(lvl.id)}</div>
+                    <div style="font-size: 1.3rem; font-weight: 800;">#${rank} – ${escapeHtml(lvl.name)}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.85; font-weight: 600;">by ${escapeHtml(lvl.creator)} • ID: ${escapeHtml(lvl.id)}</div>
                 </div>
             </div>
             <div class="modal-body">
                 <div class="stats-grid">
                     <div class="stat-box"><div class="label">Difficulty</div><div class="value">${escapeHtml(lvl.difficulty || 'Demon')}</div></div>
                     <div class="stat-box"><div class="label">Point Value</div><div class="value" style="color: var(--accent);">${pts.toFixed(2)} pts</div></div>
-                    <div class="stat-box"><div class="label">Total Victors</div><div class="value">${getVictorsForLevel(lvl.id).length}</div></div>
+                    <div class="stat-box"><div class="label">Total Victors</div><div class="value">${victors.length}</div></div>
                 </div>
-                <h3 style="font-size: 0.95rem; font-weight: 800; text-transform: uppercase;">Manage Victors</h3>
-                <div class="victors-toggle-grid">${playerButtonsHtml}</div>
+                <div style="margin-bottom: 14px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Victors:</span>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+                        ${victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="closeLevelModal(); switchView('stats', '${escapeHtml(v)}')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.8rem; font-style:italic;">None</span>'}
+                    </div>
+                </div>
                 <div class="modal-footer">
-                    <button class="btn-danger" onclick="removeLevel('${lvl.id}')">Delete Level</button>
-                    <button class="btn-secondary" onclick="closeLevelModal()">Done</button>
+                    ${appState.activePlayer ? `
+                        <button class="${isBeatenByMe ? 'btn-danger' : ''}" onclick="toggleVictor('${lvl.id}')">
+                            ${isBeatenByMe ? 'Remove Me as Victor (Password Required)' : '+ Mark Completed For Myself'}
+                        </button>
+                    ` : `<span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Log in via sidebar to modify victors</span>`}
+                    <button class="btn-secondary" onclick="closeLevelModal()">Close</button>
                 </div>
             </div>
         `;
     }
 
     function renderAll() {
+        renderAuthPanel();
         renderLeaderboard();
         renderMainList();
         renderPlayerStats();
+    }
+
+    function renderAuthPanel() {
+        const container = document.getElementById('authStatusContainer');
+        if (appState.activePlayer) {
+            container.innerHTML = `
+                <div class="auth-bar">
+                    <span>Logged in as: <strong>${escapeHtml(appState.activePlayer)}</strong></span>
+                    <button class="btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="handleLogout()">Log Out</button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div style="display: flex; gap: 8px;">
+                    <button style="flex: 1;" onclick="handleLogin()">Log In</button>
+                    <button class="btn-secondary" style="flex: 1;" onclick="handleRegister()">Register</button>
+                </div>
+            `;
+        }
     }
 
     function renderLeaderboard() {
@@ -528,11 +604,11 @@
             name, pts: getPlayerPoints(name)
         })).sort((a, b) => b.pts - a.pts);
 
-        if (playersSorted.length === 0) { container.innerHTML = `<p style="font-size:0.8rem; color:var(--text-muted);">No players yet.</p>`; return; }
+        if (playersSorted.length === 0) { container.innerHTML = `<p style="font-size:0.8rem; color:var(--text-muted);">No accounts registered.</p>`; return; }
 
         container.innerHTML = playersSorted.map((p, idx) => {
-            const isSelected = appState.currentView === 'stats' && appState.selectedPlayer === p.name;
-            return `<div class="leaderboard-item ${isSelected ? 'active' : ''}" onclick="switchView('stats', '${escapeHtml(p.name)}')"><span class="lb-rank-name">#${idx + 1} ${escapeHtml(p.name)}</span><span class="lb-pts">${p.pts.toFixed(2)} pts</span></div>`;
+            const isSelected = appState.viewingPlayer === p.name;
+            return `<div class="leaderboard-item ${isSelected ? 'active' : ''}" onclick="switchView('stats', '${escapeHtml(p.name)}')"><span class="lb-rank-name">#${idx + 1} ${escapeHtml(p.name)} ${appState.activePlayer === p.name ? '(You)' : ''}</span><span class="lb-pts">${p.pts.toFixed(2)} pts</span></div>`;
         }).join('');
     }
 
@@ -541,7 +617,7 @@
         const list = appState.levels;
 
         if (list.length === 0) {
-            container.innerHTML = `<div class="empty-state"><h3>No Levels Ranked Yet</h3><p style="margin-top:8px;">Enter Level IDs on the right sidebar.</p></div>`;
+            container.innerHTML = `<div class="empty-state"><h3>No Levels on Main List</h3><p style="margin-top:6px;">Complete a level to feature it here automatically.</p></div>`;
             return;
         }
 
@@ -550,7 +626,7 @@
             const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); switchView('stats', '${escapeHtml(v)}')">${escapeHtml(v)}</span>`).join('') : `<span style="font-style:italic; font-size:0.78rem;">None yet</span>`;
+            const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); switchView('stats', '${escapeHtml(v)}')">${escapeHtml(v)}</span>`).join('');
 
             return `
                 <article class="level-card" onclick="openLevelModal('${lvl.id}')">
@@ -576,19 +652,24 @@
     }
 
     function renderPlayerStats() {
-        const player = appState.selectedPlayer;
-        if (!player || !appState.players[player]) return;
+        const player = appState.viewingPlayer;
+        if (!player || !appState.players[player]) {
+            document.getElementById('playerProfileTitle').textContent = "Select a Profile";
+            document.getElementById('playerProfileStats').textContent = "Click any player on the leaderboard to view their progress";
+            document.getElementById('playerPersonalList').innerHTML = "";
+            return;
+        }
 
-        const completedIds = appState.players[player];
+        const data = appState.players[player];
         const totalPoints = getPlayerPoints(player);
-        const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => completedIds.includes(String(lvl.id)));
+        const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
 
         document.getElementById('playerProfileTitle').textContent = `${player}'s Profile`;
-        document.getElementById('playerProfileStats').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} / ${appState.levels.length} Levels Completed`;
+        document.getElementById('playerProfileStats').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} Completed Levels`;
 
         const personalListEl = document.getElementById('playerPersonalList');
         if (beatenLevels.length === 0) {
-            personalListEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels Yet</h3><p style="margin-top:8px;">Click any level on the Main Demonlist to add victors.</p></div>`;
+            personalListEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels</h3><p style="margin-top:6px;">This user has not completed any levels yet.</p></div>`;
             return;
         }
 
