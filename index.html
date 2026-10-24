@@ -33,7 +33,17 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-main); }
+        
+        /* Dynamic Background support with smooth transition */
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            transition: background-image 0.3s ease-in-out, background-color 0.2s;
+        }
 
         header {
             background-color: var(--bg-header);
@@ -207,7 +217,7 @@
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
     </style>
 </head>
-<body>
+<body id="pageBody" onmousemove="checkBackgroundReset(event)">
 
 <header>
     <div class="brand">STUDMERLIST <span>CLOUD VIEWER</span></div>
@@ -218,7 +228,7 @@
     </div>
 </header>
 
-<div class="container">
+<div class="container" id="mainContainer">
     <!-- VIEW 1: MAIN DEMONLIST -->
     <div id="mainListView" class="list-container">
         <div id="mainLevelsList" class="list-container"></div>
@@ -296,7 +306,48 @@
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
+    let lockedBackgroundUrl = null; // Stores background when clicked/pressed
     const videoIdCache = {};
+
+    function setDynamicBackground(url) {
+        document.body.style.backgroundImage = `url('${url}')`;
+        document.body.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+    }
+
+    function clearDynamicBackground() {
+        if (!lockedBackgroundUrl) {
+            document.body.style.backgroundImage = 'none';
+            document.body.style.backgroundColor = '';
+        }
+    }
+
+    function handleCardMouseEnter(url) {
+        if (!lockedBackgroundUrl) {
+            setDynamicBackground(url);
+        }
+    }
+
+    function handleCardMouseLeave() {
+        if (!lockedBackgroundUrl) {
+            clearDynamicBackground();
+        }
+    }
+
+    function handleCardClick(url, event) {
+        event.stopPropagation();
+        lockedBackgroundUrl = url;
+        setDynamicBackground(url);
+    }
+
+    function checkBackgroundReset(event) {
+        // If mouse moves outside the container area (hovering on side margins) and no card is clicked-lock, reset background
+        const container = document.getElementById('mainContainer');
+        const rect = container.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right) {
+            lockedBackgroundUrl = null;
+            clearDynamicBackground();
+        }
+    }
 
     async function loadCloudData() {
         try {
@@ -808,7 +859,10 @@
             const beaten = isBeatenByActiveUser(lvl.id);
 
             return `
-                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" onclick="openLevelModal('${lvl.id}')">
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
+                         onmouseenter="handleCardMouseEnter('${thumbUrl}')" 
+                         onmouseleave="handleCardMouseLeave()" 
+                         onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
@@ -881,7 +935,10 @@
             const beaten = isBeatenByActiveUser(lvl.id);
 
             return `
-                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" onclick="openLevelModal('${lvl.id}')">
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
+                         onmouseenter="handleCardMouseEnter('${thumbUrl}')" 
+                         onmouseleave="handleCardMouseLeave()" 
+                         onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
@@ -930,7 +987,10 @@
             const beaten = isBeatenByActiveUser(lvl.id);
 
             return `
-                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" onclick="openLevelModal('${lvl.id}')">
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
+                         onmouseenter="handleCardMouseEnter('${thumbUrl}')" 
+                         onmouseleave="handleCardMouseLeave()" 
+                         onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
