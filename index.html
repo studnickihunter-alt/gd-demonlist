@@ -153,8 +153,8 @@
         .level-card:hover .level-name { text-decoration: underline; }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victor-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
+        .victors-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
             padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
@@ -311,25 +311,17 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
-    let bgResetTimer = null;
     const songIdCache = {};
 
     function setDynamicBackground(url) {
-        if (bgResetTimer) clearTimeout(bgResetTimer);
         document.body.style.backgroundImage = `url('${url}')`;
         document.body.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
     }
 
     function clearDynamicBackground() {
         if (!lockedBackgroundUrl) {
-            if (bgResetTimer) clearTimeout(bgResetTimer);
-            // 2-second cooldown before switching back to normal white background
-            bgResetTimer = setTimeout(() => {
-                if (!lockedBackgroundUrl) {
-                    document.body.style.backgroundImage = 'none';
-                    document.body.style.backgroundColor = '';
-                }
-            }, 2000);
+            document.body.style.backgroundImage = 'none';
+            document.body.style.backgroundColor = '';
         }
     }
 
@@ -355,8 +347,11 @@
 
         if (songId) {
             const audioDiv = document.getElementById('audioContainer');
-            // Play song audio using GDBrowser's Newgrounds audio endpoint proxy
-            audioDiv.innerHTML = `<audio autoplay src="https://gdbrowser.com/api/song?id=${songId}"></audio>`;
+            audioDiv.innerHTML = `<audio autoplay controls src="https://gdbrowser.com/api/song?id=${songId}"></audio>`;
+            const audioEl = audioDiv.querySelector('audio');
+            if (audioEl) {
+                audioEl.play().catch(err => console.log("Audio autoplay restricted by browser:", err));
+            }
         }
     }
 
@@ -885,6 +880,8 @@
             const rank = index + 1;
             const thumbUrl = getLevelThumbnail(lvl);
             const pts = getLevelPoints(lvl);
+            const victors = getVictorsForLevel(lvl.id);
+            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
@@ -905,6 +902,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
+                        <div class="victors-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-points">${pts.toFixed(2)} pts</span>
@@ -964,6 +962,8 @@
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
+            const victors = getVictorsForLevel(lvl.id);
+            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
@@ -981,6 +981,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
+                        <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
@@ -1016,6 +1017,8 @@
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
+            const victors = getVictorsForLevel(lvl.id);
+            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
@@ -1033,6 +1036,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
+                        <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
