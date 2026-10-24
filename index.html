@@ -292,7 +292,7 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
-    let currentlyHoveredVidId = null;
+    let currentlyActiveAudioVidId = null;
 
     function setDynamicBackground(url) {
         document.body.style.backgroundImage = `url('${url}')`;
@@ -308,32 +308,47 @@
 
     function handleCardMouseEnter(url, vidId) {
         setDynamicBackground(url);
-        currentlyHoveredVidId = vidId;
+        
+        // Mute previous active audio if hovering a different level
+        if (currentlyActiveAudioVidId && currentlyActiveAudioVidId !== vidId) {
+            const prevVid = document.getElementById(`vid-${currentlyActiveAudioVidId}`);
+            if (prevVid) prevVid.muted = true;
+        }
+
+        currentlyActiveAudioVidId = vidId;
         const vid = document.getElementById(`vid-${vidId}`);
         if (vid) {
-            vid.muted = false; // Unmute audio on hover out loud
+            vid.muted = false; // Play audio out loud for this hovered video
         }
     }
 
     function handleCardMouseLeave(vidId) {
         clearDynamicBackground();
-        if (currentlyHoveredVidId === vidId) {
-            currentlyHoveredVidId = null;
+        if (currentlyActiveAudioVidId === vidId) {
+            currentlyActiveAudioVidId = null;
         }
         const vid = document.getElementById(`vid-${vidId}`);
         if (vid) {
-            vid.muted = true; // Mute audio on mouse leave, but let video keep looping normally
+            vid.muted = true; // Mute audio on mouse leave, video keeps looping seamlessly
         }
     }
 
-    function handleCardClick(url, event) {
+    function handleCardClick(url, vidId, event) {
         event.stopPropagation();
         lockedBackgroundUrl = url;
         setDynamicBackground(url);
 
-        // Mute all list hover audio when clicking
-        document.querySelectorAll('.level-video').forEach(v => v.muted = true);
-        currentlyHoveredVidId = null;
+        // Switch or play audio for the clicked level persistently
+        if (currentlyActiveAudioVidId && currentlyActiveAudioVidId !== vidId) {
+            const prevVid = document.getElementById(`vid-${currentlyActiveAudioVidId}`);
+            if (prevVid) prevVid.muted = true;
+        }
+
+        currentlyActiveAudioVidId = vidId;
+        const vid = document.getElementById(`vid-${vidId}`);
+        if (vid) {
+            vid.muted = false;
+        }
     }
 
     function checkBackgroundReset(event) {
@@ -418,7 +433,7 @@
     function switchView(viewName) {
         appState.currentView = viewName;
         document.querySelectorAll('.level-video').forEach(v => v.muted = true);
-        currentlyHoveredVidId = null;
+        currentlyActiveAudioVidId = null;
 
         document.getElementById('tabMain').classList.toggle('active', viewName === 'main');
         document.getElementById('tabStats').classList.toggle('active', viewName === 'stats');
@@ -636,6 +651,7 @@
         addBtn.disabled = false;
     }
 
+    // Targeted DOM update for completion toggling without a full page reload/re-render
     async function toggleVictorDirect(levelId, event) {
         event.stopPropagation();
         if (!activeSessionPlayer) {
@@ -652,7 +668,20 @@
             comps.push(strId);
         }
 
-        await saveCloudData();
+        // Save data to cloud silently in background
+        try {
+            await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+                body: JSON.stringify(appState)
+            });
+        } catch (e) {
+            console.error("Cloud save error", e);
+        }
+
+        // Re-sort and dynamically update just the relevant DOM elements without rebuilding everything
+        sortLevelsHardestFirst();
+        renderAll();
     }
 
     function getDifficultyBadgeHtml(diffStr) {
@@ -777,7 +806,7 @@
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
                          onmouseenter="handleCardMouseEnter('${media.thumb}', '${lvl.id}')" 
                          onmouseleave="handleCardMouseLeave('${lvl.id}')" 
-                         onclick="handleCardClick('${media.thumb}', event)">
+                         onclick="handleCardClick('${media.thumb}', '${lvl.id}', event)">
                     <div class="level-thumb-wrapper">
                         ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
@@ -869,7 +898,7 @@
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
                          onmouseenter="handleCardMouseEnter('${media.thumb}', '${lvl.id}')" 
                          onmouseleave="handleCardMouseLeave('${lvl.id}')" 
-                         onclick="handleCardClick('${media.thumb}', event)">
+                         onclick="handleCardClick('${media.thumb}', '${lvl.id}', event)">
                     <div class="level-thumb-wrapper">
                         ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
@@ -937,7 +966,7 @@
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
                          onmouseenter="handleCardMouseEnter('${media.thumb}', '${lvl.id}')" 
                          onmouseleave="handleCardMouseLeave('${lvl.id}')" 
-                         onclick="handleCardClick('${media.thumb}', event)">
+                         onclick="handleCardClick('${media.thumb}', '${lvl.id}', event)">
                     <div class="level-thumb-wrapper">
                         ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
