@@ -130,7 +130,7 @@
 
         .level-thumb-wrapper { width: 100%; height: 140px; position: relative; background-color: #000; overflow: hidden; }
         @media (min-width: 650px) { .level-thumb-wrapper { width: 225px; min-width: 225px; height: auto; } }
-        .level-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .level-thumb, .level-video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 
         .check-overlay {
             position: absolute; top: 6px; left: 6px; width: 64px; height: 64px;
@@ -139,7 +139,7 @@
 
         .level-id-badge {
             position: absolute; bottom: 6px; left: 6px; background: rgba(0, 0, 0, 0.75);
-            color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 6px; border-radius: 3px;
+            color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 6px; border-radius: 3px; z-index: 5;
         }
 
         .level-content { padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
@@ -153,8 +153,8 @@
         .level-card:hover .level-name { text-decoration: underline; }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victors-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
+        .victor-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
             padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
@@ -199,15 +199,13 @@
         .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 30px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
         .hidden { display: none !important; }
 
-        #audioContainer { display: none; }
-
         /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 12px; }
         .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
         .modal-hero { position: relative; height: 260px; background-color: #000; overflow: hidden; }
         @media(min-width: 600px) { .modal-hero { height: 320px; } }
-        .modal-hero img, .modal-hero iframe { width: 100%; height: 100%; object-fit: cover; border: none; display: block; }
-        .modal-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)); color: #fff; pointer-events: none; }
+        .modal-hero img, .modal-hero video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .modal-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)); color: #fff; pointer-events: none; z-index: 5; }
         .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.65); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 20; }
         .modal-body { padding: 18px; }
         @media(min-width: 600px) { .modal-body { padding: 24px; } }
@@ -281,9 +279,6 @@
     </div>
 </div>
 
-<!-- Hidden container for playing song audio on hover -->
-<div id="audioContainer"></div>
-
 <!-- Modal -->
 <div id="levelModal" class="modal-overlay hidden" onclick="closeModalOnBg(event)">
     <div class="modal-card" id="levelModalContent"></div>
@@ -306,12 +301,11 @@
         { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "deadlocked.png" },
         { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "toe2.png" },
         { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "clubstep.png" },
-        { id: "cantletgo", name: "Can't Let Go", creator: "RobTop", difficulty: "it's impossible, nobodies ever done it before!", points: 0.00, thumb: "cantletgo.png" }
+        { id: "cantletgo", name: "Can't Let Go", creator: "RobTop", difficulty: "Impossible, Nobody has ever done it before", points: 0.00, thumb: "cantletgo.png" }
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
-    const songIdCache = {};
 
     function setDynamicBackground(url) {
         document.body.style.backgroundImage = `url('${url}')`;
@@ -325,45 +319,22 @@
         }
     }
 
-    async function handleCardMouseEnter(lvl, url) {
-        setDynamicBackground(url);
-
-        const strId = String(lvl.id);
-        if (SPECIAL_LEVELS.some(sp => String(sp.id) === strId)) return;
-
-        let songId = songIdCache[strId];
-        if (!songId) {
-            try {
-                const res = await fetch(`https://gdbrowser.com/api/level/${strId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.songID) {
-                        songId = data.songID;
-                        songIdCache[strId] = songId;
-                    }
-                }
-            } catch (e) {}
-        }
-
-        if (songId) {
-            const audioDiv = document.getElementById('audioContainer');
-            audioDiv.innerHTML = `<audio autoplay controls src="https://gdbrowser.com/api/song?id=${songId}"></audio>`;
-            const audioEl = audioDiv.querySelector('audio');
-            if (audioEl) {
-                audioEl.play().catch(err => console.log("Audio autoplay restricted by browser:", err));
-            }
+    function handleCardMouseEnter(lvl, mediaSrc, isVideo) {
+        if (!isVideo) {
+            setDynamicBackground(mediaSrc);
         }
     }
 
     function handleCardMouseLeave() {
         clearDynamicBackground();
-        document.getElementById('audioContainer').innerHTML = '';
     }
 
-    function handleCardClick(url, event) {
+    function handleCardClick(mediaSrc, isVideo, event) {
         event.stopPropagation();
-        lockedBackgroundUrl = url;
-        setDynamicBackground(url);
+        if (!isVideo) {
+            lockedBackgroundUrl = mediaSrc;
+            setDynamicBackground(mediaSrc);
+        }
     }
 
     function checkBackgroundReset(event) {
@@ -373,6 +344,21 @@
             lockedBackgroundUrl = null;
             clearDynamicBackground();
         }
+    }
+
+    function getLevelMedia(lvl) {
+        const strId = String(lvl.id);
+        // Check if an uploaded MP4 video file exists for this level ID
+        // (Assumes you uploaded files named like "10565740.mp4" in your root repository)
+        const isSpecial = SPECIAL_LEVELS.some(s => String(s.id) === strId);
+        if (!isSpecial && /^\d+$/.test(strId)) {
+            return { src: `${strId}.mp4`, isVideo: true };
+        }
+        
+        // Otherwise fallback to thumbnail image
+        const sp = SPECIAL_LEVELS.find(s => String(s.id) === strId);
+        if (sp) return { src: sp.thumb, isVideo: false };
+        return { src: `https://levelthumbs.prevter.me/thumbnail/${strId}`, isVideo: false };
     }
 
     async function loadCloudData() {
@@ -692,12 +678,6 @@
         return `<img class="${cssClass}" src="${imgName}" alt="${safeAlt}" title="${safeAlt}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${safeAlt}'));">`;
     }
 
-    function getLevelThumbnail(lvl) {
-        const sp = SPECIAL_LEVELS.find(s => String(s.id) === String(lvl.id));
-        if (sp) return sp.thumb;
-        return `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
-    }
-
     function getRankBgClass(rank) {
         if (rank === 1) return 'rank-1';
         if (rank === 2) return 'rank-2';
@@ -714,57 +694,23 @@
         );
     }
 
-    function extractYoutubeId(str) {
-        if (!str) return null;
-        const s = String(str).trim();
-        if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
-        const m = s.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-        return m ? m[1] : null;
-    }
-
-    async function fetchGddlVideoId(levelObj) {
-        const strId = String(levelObj.id);
-        if (SPECIAL_LEVELS.some(sp => String(sp.id) === strId)) return null;
-        if (videoIdCache[strId]) return videoIdCache[strId];
-
-        const endpoints = [
-            `https://gdladder.com/api/level/${strId}`,
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://gdladder.com/api/level/${strId}`)}`,
-            `https://corsproxy.io/?${encodeURIComponent(`https://gdladder.com/api/level/${strId}`)}`
-        ];
-
-        for (const url of endpoints) {
-            try {
-                const res = await fetch(url);
-                if (res.ok) {
-                    const data = await res.json();
-                    const showcase = data.Showcase || data.showcase || data.Meta?.Showcase || data.meta?.showcase || data.video || data.Video;
-                    const ytId = extractYoutubeId(showcase);
-                    if (ytId) {
-                        videoIdCache[strId] = ytId;
-                        return ytId;
-                    }
-                }
-            } catch (e) {}
-        }
-
-        return null;
-    }
-
-    async function renderModalContent(levelId) {
+    function renderModalContent(levelId) {
         const lvl = appState.levels.find(l => String(l.id) === String(levelId));
         if (!lvl) return;
         const rank = appState.levels.indexOf(lvl) + 1;
         const pts = getLevelPoints(lvl);
-        const thumbUrl = getLevelThumbnail(lvl);
+        const media = getLevelMedia(lvl);
         const victors = getVictorsForLevel(lvl.id);
         const isBeatenByMe = isBeatenByActiveUser(lvl.id);
         const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon', true);
-        const isSpecial = SPECIAL_LEVELS.some(sp => String(sp.id) === String(lvl.id));
+
+        const mediaHtml = media.isVideo 
+            ? `<video class="modal-hero" src="${media.src}" autoplay muted loop playsinline></video>`
+            : `<img src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
         document.getElementById('levelModalContent').innerHTML = `
             <div class="modal-hero" id="modalHeroContainer">
-                <img src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                ${mediaHtml}
                 <button class="modal-close" onclick="closeLevelModal()">✕</button>
                 <div class="modal-hero-overlay" id="modalHeroOverlay">
                     <div style="font-size: 1.3rem; font-weight: 800;">#${rank} – ${escapeHtml(lvl.name)}</div>
@@ -785,26 +731,13 @@
                 <div class="modal-footer">
                     ${activeSessionPlayer ? `
                         <button class="${isBeatenByMe ? 'btn-danger' : ''}" onclick="toggleVictor('${lvl.id}')">
-                            ${isBeatenByMe ? 'Remove Completion' : '+ Complete'}
+                            ${isBeatenByMe ? 'Remove Completion' : '+ Mark Completed For Myself'}
                         </button>
                     ` : `<span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Log into account tab to modify victors</span>`}
                     <button class="btn-secondary" onclick="closeLevelModal()">Close</button>
                 </div>
             </div>
         `;
-
-        if (!isSpecial) {
-            const ytId = await fetchGddlVideoId(lvl);
-            if (ytId && appState.activeModalLevelId === String(levelId)) {
-                const heroContainer = document.getElementById('modalHeroContainer');
-                if (heroContainer) {
-                    heroContainer.innerHTML = `
-                        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&enablejsapi=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
-                        <button class="modal-close" onclick="closeLevelModal()">✕</button>
-                    `;
-                }
-            }
-        }
     }
 
     function renderAll() {
@@ -878,7 +811,7 @@
 
         container.innerHTML = list.map((lvl, index) => {
             const rank = index + 1;
-            const thumbUrl = getLevelThumbnail(lvl);
+            const media = getLevelMedia(lvl);
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
@@ -886,13 +819,17 @@
             const rankClass = getRankBgClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
 
+            const mediaEl = media.isVideo
+                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline></video>`
+                : `<img class="level-thumb" src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${thumbUrl}')" 
+                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${media.src}', ${media.isVideo})" 
                          onmouseleave="handleCardMouseLeave()" 
-                         onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
+                         onclick="handleCardClick('${media.src}', ${media.isVideo}, event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
-                        <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
@@ -902,7 +839,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
-                        <div class="victors-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
+                        <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-points">${pts.toFixed(2)} pts</span>
@@ -958,20 +895,24 @@
 
         personalListEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
-            const thumbUrl = getLevelThumbnail(lvl);
+            const media = getLevelMedia(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
+            const mediaEl = media.isVideo
+                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline></video>`
+                : `<img class="level-thumb" src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${thumbUrl}')" 
+                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${media.src}', ${media.isVideo})" 
                          onmouseleave="handleCardMouseLeave()" 
-                         onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
+                         onclick="handleCardClick('${media.src}', ${media.isVideo}, event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
-                        <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
@@ -1013,20 +954,24 @@
 
         listEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
-            const thumbUrl = getLevelThumbnail(lvl);
+            const media = getLevelMedia(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
+            const mediaEl = media.isVideo
+                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline></video>`
+                : `<img class="level-thumb" src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${thumbUrl}')" 
+                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${media.src}', ${media.isVideo})" 
                          onmouseleave="handleCardMouseLeave()" 
-                         onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
+                         onclick="handleCardClick('${media.src}', ${media.isVideo}, event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
-                        <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
