@@ -109,13 +109,11 @@
         @media (min-width: 650px) { .level-card { flex-direction: row; min-height: 120px; } }
         .level-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
 
-        /* Top 10 Rank Backgrounds */
         .level-card.rank-1 { background: linear-gradient(135deg, #fff5b8 0%, #ffdf6b 100%); }
         .level-card.rank-2 { background: linear-gradient(135deg, #f2f4f7 0%, #d5d9e0 100%); }
         .level-card.rank-3 { background: linear-gradient(135deg, #f9e2cc 0%, #e0ab76 100%); }
         .level-card.rank-top10 { background: linear-gradient(135deg, #ffe5ec 0%, #ffb3c6 100%); }
 
-        /* Golden Border for Beaten Levels (Twice as thick: 6px) */
         .level-card.beaten-level {
             border: 6px solid #ffd700 !important;
             box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
@@ -125,7 +123,6 @@
         @media (min-width: 650px) { .level-thumb-wrapper { width: 225px; min-width: 225px; height: auto; } }
         .level-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-        /* Twice as large: 64px */
         .check-overlay {
             position: absolute; top: 6px; left: 6px; width: 64px; height: 64px;
             object-fit: contain; z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
@@ -147,8 +144,8 @@
         .level-card:hover .level-name { text-decoration: underline; }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victors-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
+        .victor-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
             padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
@@ -725,7 +722,7 @@
                 const heroContainer = document.getElementById('modalHeroContainer');
                 if (heroContainer) {
                     heroContainer.innerHTML = `
-                        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+                        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&enablejsapi=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
                         <button class="modal-close" onclick="closeLevelModal()">✕</button>
                     `;
                 }
@@ -806,8 +803,6 @@
             const rank = index + 1;
             const thumbUrl = getLevelThumbnail(lvl);
             const pts = getLevelPoints(lvl);
-            const victors = getVictorsForLevel(lvl.id);
-            const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('');
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
@@ -825,7 +820,6 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
-                        <div class="victors-row"><span class="victors-label">Victors (${victors.length}):</span> ${victorsHtml}</div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-points">${pts.toFixed(2)} pts</span>
