@@ -199,6 +199,8 @@
         .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 30px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
         .hidden { display: none !important; }
 
+        #audioContainer { display: none; }
+
         /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 12px; }
         .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
@@ -279,6 +281,9 @@
     </div>
 </div>
 
+<!-- Hidden container for persistent level audio -->
+<div id="audioContainer"></div>
+
 <!-- Modal -->
 <div id="levelModal" class="modal-overlay hidden" onclick="closeModalOnBg(event)">
     <div class="modal-card" id="levelModalContent"></div>
@@ -306,6 +311,8 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
+    let activeAudioLevelId = null;
+    const songIdCache = {};
 
     function setDynamicBackground(url) {
         document.body.style.backgroundImage = `url('${url}')`;
@@ -342,8 +349,7 @@
         }
     }
 
-    // ADD YOUR 3 LEVEL IDs HERE (e.g. ["10565740", "12345678", "87654321"])
-    const UPLOADED_VIDEO_IDS = ["10565740", "95355264", "60284098"]; 
+    const UPLOADED_VIDEO_IDS = ["10565740"]; 
 
     function getLevelMedia(lvl) {
         const strId = String(lvl.id);
@@ -359,6 +365,36 @@
         }
         
         return { src: thumbUrl, thumb: thumbUrl, isVideo: false };
+    }
+
+    async function playLevelAudio(lvl) {
+        const strId = String(lvl.id);
+        if (SPECIAL_LEVELS.some(sp => String(sp.id) === strId)) return;
+        if (activeAudioLevelId === strId) return; // Keep playing if already active
+
+        activeAudioLevelId = strId;
+        let songId = songIdCache[strId];
+        if (!songId) {
+            try {
+                const res = await fetch(`https://gdbrowser.com/api/level/${strId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.songID) {
+                        songId = data.songID;
+                        songIdCache[strId] = songId;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (songId && activeAudioLevelId === strId) {
+            const audioDiv = document.getElementById('audioContainer');
+            audioDiv.innerHTML = `<audio autoplay controls src="https://gdbrowser.com/api/song?id=${songId}"></audio>`;
+            const audioEl = audioDiv.querySelector('audio');
+            if (audioEl) {
+                audioEl.play().catch(err => console.log("Audio autoplay restricted:", err));
+            }
+        }
     }
 
     async function loadCloudData() {
@@ -415,6 +451,10 @@
 
     function switchView(viewName) {
         appState.currentView = viewName;
+        // Stop audio when switching tabs
+        activeAudioLevelId = null;
+        document.getElementById('audioContainer').innerHTML = '';
+
         document.getElementById('tabMain').classList.toggle('active', viewName === 'main');
         document.getElementById('tabStats').classList.toggle('active', viewName === 'stats');
         document.getElementById('tabAccount').classList.toggle('active', viewName === 'account');
@@ -652,8 +692,18 @@
 
     function openLevelModal(levelId) {
         appState.activeModalLevelId = String(levelId);
+        const lvl = appState.levels.find(l => String(l.id) === String(levelId));
+        if (lvl) playLevelAudio(lvl);
+        
         renderModalContent(appState.activeModalLevelId);
         document.getElementById('levelModal').classList.remove('hidden');
+
+        // Restart list video element to sync with modal open
+        const listVid = document.getElementById(`vid-${levelId}`);
+        if (listVid) {
+            listVid.currentTime = 0;
+            listVid.play().catch(e => {});
+        }
     }
 
     function closeLevelModal() {
@@ -820,7 +870,7 @@
             const beaten = isBeatenByActiveUser(lvl.id);
 
             const mediaEl = media.isVideo
-                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
+                ? `<video id="vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
                 : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
             return `
@@ -903,7 +953,7 @@
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             const mediaEl = media.isVideo
-                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
+                ? `<video id="vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
                 : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
             return `
@@ -962,7 +1012,7 @@
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             const mediaEl = media.isVideo
-                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
+                ? `<video id="vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
                 : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
             return `
