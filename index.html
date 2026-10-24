@@ -109,9 +109,26 @@
         @media (min-width: 650px) { .level-card { flex-direction: row; min-height: 120px; } }
         .level-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
 
+        /* Top 10 Rank Backgrounds */
+        .level-card.rank-1 { background: linear-gradient(135deg, #fff5b8 0%, #ffdf6b 100%); }
+        .level-card.rank-2 { background: linear-gradient(135deg, #f2f4f7 0%, #d5d9e0 100%); }
+        .level-card.rank-3 { background: linear-gradient(135deg, #f9e2cc 0%, #e0ab76 100%); }
+        .level-card.rank-top10 { background: linear-gradient(135deg, #ffe5ec 0%, #ffb3c6 100%); }
+
+        /* Golden Border for Beaten Levels */
+        .level-card.beaten-level {
+            border: 3px solid #ffd700 !important;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+        }
+
         .level-thumb-wrapper { width: 100%; height: 140px; position: relative; background-color: #000; overflow: hidden; }
         @media (min-width: 650px) { .level-thumb-wrapper { width: 225px; min-width: 225px; height: auto; } }
         .level-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        .check-overlay {
+            position: absolute; top: 6px; left: 6px; width: 32px; height: 32px;
+            object-fit: contain; z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+        }
 
         .level-id-badge {
             position: absolute; bottom: 6px; left: 6px; background: rgba(0, 0, 0, 0.75);
@@ -129,8 +146,8 @@
         .level-card:hover .level-name { text-decoration: underline; }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victor-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
+        .victors-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
             padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
@@ -608,6 +625,22 @@
         return `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
     }
 
+    function getRankBgClass(rank) {
+        if (rank === 1) return 'rank-1';
+        if (rank === 2) return 'rank-2';
+        if (rank === 3) return 'rank-3';
+        if (rank >= 4 && rank <= 10) return 'rank-top10';
+        return '';
+    }
+
+    function isBeatenByActiveUser(levelId) {
+        return Boolean(
+            activeSessionPlayer &&
+            appState.players[activeSessionPlayer] &&
+            appState.players[activeSessionPlayer].completions.includes(String(levelId))
+        );
+    }
+
     function renderModalContent(levelId) {
         const lvl = appState.levels.find(l => String(l.id) === String(levelId));
         if (!lvl) return;
@@ -615,7 +648,7 @@
         const pts = getLevelPoints(lvl);
         const thumbUrl = getLevelThumbnail(lvl);
         const victors = getVictorsForLevel(lvl.id);
-        const isBeatenByMe = activeSessionPlayer && appState.players[activeSessionPlayer].completions.includes(String(lvl.id));
+        const isBeatenByMe = isBeatenByActiveUser(lvl.id);
         const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon', true);
 
         document.getElementById('levelModalContent').innerHTML = `
@@ -727,11 +760,14 @@
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('');
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
+            const rankClass = getRankBgClass(rank);
+            const beaten = isBeatenByActiveUser(lvl.id);
 
             return `
-                <article class="level-card" onclick="openLevelModal('${lvl.id}')">
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" onclick="openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
                     <div class="level-content">
@@ -768,7 +804,6 @@
         document.getElementById('playerProfileTitle').textContent = `${player}'s Profile`;
         document.getElementById('playerProfileStatsText').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} Completed Levels`;
 
-        // Calculate counts for each difficulty
         let counts = { easy: 0, medium: 0, hard: 0, insane: 0, extreme: 0, impossible: 0 };
         beatenLevels.forEach(lvl => {
             const s = String(lvl.difficulty || 'Easy Demon').toLowerCase();
@@ -799,11 +834,14 @@
             const personalRank = personalIdx + 1;
             const thumbUrl = getLevelThumbnail(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
+            const rankClass = getRankBgClass(personalRank);
+            const beaten = isBeatenByActiveUser(lvl.id);
 
             return `
-                <article class="level-card" onclick="openLevelModal('${lvl.id}')">
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" onclick="openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
                     <div class="level-content">
@@ -846,11 +884,14 @@
             const personalRank = personalIdx + 1;
             const thumbUrl = getLevelThumbnail(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
+            const rankClass = getRankBgClass(personalRank);
+            const beaten = isBeatenByActiveUser(lvl.id);
 
             return `
-                <article class="level-card" onclick="openLevelModal('${lvl.id}')">
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" onclick="openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
                     <div class="level-content">
