@@ -83,10 +83,23 @@
         .list-banner {
             background-color: var(--bg-card); padding: 16px 20px; border-radius: 4px;
             box-shadow: var(--shadow); border-left: 5px solid var(--accent);
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
         }
         .list-banner h1 { font-size: 1.25rem; font-weight: 800; text-transform: uppercase; }
         @media(min-width: 600px) { .list-banner h1 { font-size: 1.5rem; } }
+
+        .profile-stats-container {
+            display: flex; flex-direction: column; gap: 8px; flex-grow: 1;
+        }
+        .profile-counts-row {
+            display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 4px;
+        }
+        .profile-count-item {
+            display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.85rem;
+        }
+        .profile-count-item img {
+            height: 22px; width: auto; display: block;
+        }
 
         .level-card {
             background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow);
@@ -116,8 +129,8 @@
         .level-card:hover .level-name { text-decoration: underline; }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victors-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-        .victors-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
+        .victor-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
             padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
@@ -127,7 +140,8 @@
 
         .level-meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; display: flex; align-items: center; }
-        .badge-diff-img { height: 18px; width: auto; display: block; }
+        .badge-diff-img { height: 26px; width: auto; display: block; }
+        .modal-diff-img { height: 34px; width: auto; display: block; }
         .badge-points { background-color: rgba(0, 102, 204, 0.12); color: var(--accent); }
         .badge-mainrank { background-color: rgba(108, 117, 125, 0.15); color: var(--text-muted); }
 
@@ -176,7 +190,7 @@
         @media(min-width: 500px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
         .stat-box { background-color: var(--bg-body); border: 1px solid var(--border); border-radius: 4px; padding: 10px; text-align: center; }
         .stat-box .label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
-        .stat-box .value { font-size: 0.95rem; font-weight: 800; }
+        .stat-box .value { font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
     </style>
 </head>
@@ -204,9 +218,10 @@
             <div id="leaderboardContainer" class="leaderboard-grid"></div>
         </div>
         <div class="list-banner">
-            <div>
+            <div class="profile-stats-container">
                 <h1 id="playerProfileTitle">Player Name</h1>
-                <p id="playerProfileStats">0.00 Points • 0 Levels Completed</p>
+                <p id="playerProfileStatsText">0.00 Points • 0 Levels Completed</p>
+                <div id="profileCountsRow" class="profile-counts-row"></div>
             </div>
         </div>
         <div id="playerPersonalList" class="list-container"></div>
@@ -261,11 +276,11 @@
         players: {}
     };
 
-    // PERMANENT SPECIAL LEVELS (DEADLOCKED, TOE2, CLUBSTEP)
+    // PERMANENT SPECIAL LEVELS WITH THEIR CUSTOM IMAGE FILENAMES
     const SPECIAL_LEVELS = [
-        { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "https://gdbrowser.com/assets/difficulties/demons/easy.png" },
-        { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "https://gdbrowser.com/assets/difficulties/demons/easy.png" },
-        { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "https://gdbrowser.com/assets/difficulties/demons/easy.png" }
+        { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "deadlocked.png" },
+        { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "toe2.png" },
+        { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "clubstep.png" }
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
@@ -288,7 +303,6 @@
         if (!appState.players) appState.players = {};
         if (!appState.levels) appState.levels = [];
 
-        // Ensure special levels are always included in memory
         SPECIAL_LEVELS.forEach(sp => {
             if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
                 appState.levels.push(sp);
@@ -418,16 +432,13 @@
 
     function purgeUnusedLevels() {
         appState.levels = appState.levels.filter(lvl => {
-            // Special levels always stay
             if (SPECIAL_LEVELS.some(sp => String(sp.id) === String(lvl.id))) return true;
-            
             for (let p in appState.players) {
                 if (appState.players[p].completions.includes(String(lvl.id))) return true;
             }
             return false;
         });
 
-        // Ensure special levels are present even if un-purged elsewhere
         SPECIAL_LEVELS.forEach(sp => {
             if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
                 appState.levels.push(sp);
@@ -576,7 +587,7 @@
 
     function closeModalOnBg(event) { if (event.target.id === 'levelModal') closeLevelModal(); }
 
-    function getDifficultyBadgeHtml(diffStr) {
+    function getDifficultyBadgeHtml(diffStr, isModal = false) {
         const s = String(diffStr).toLowerCase();
         let imgName = 'easy.png';
         if (s.includes('medium')) imgName = 'medium.png';
@@ -584,7 +595,14 @@
         else if (s.includes('insane')) imgName = 'insane.png';
         else if (s.includes('extreme')) imgName = 'extreme.png';
 
-        return `<img class="badge-diff-img" src="${imgName}" alt="${diffStr}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${diffStr}'));">`;
+        const cssClass = isModal ? 'modal-diff-img' : 'badge-diff-img';
+        return `<img class="${cssClass}" src="${imgName}" alt="${diffStr}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${diffStr}'));">`;
+    }
+
+    function getLevelThumbnail(lvl) {
+        const sp = SPECIAL_LEVELS.find(s => String(s.id) === String(lvl.id));
+        if (sp) return sp.thumb;
+        return `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
     }
 
     function renderModalContent(levelId) {
@@ -592,14 +610,10 @@
         if (!lvl) return;
         const rank = appState.levels.indexOf(lvl) + 1;
         const pts = getLevelPoints(lvl);
-        
-        let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
-        if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
-        if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
-        if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
-
+        const thumbUrl = getLevelThumbnail(lvl);
         const victors = getVictorsForLevel(lvl.id);
         const isBeatenByMe = activeSessionPlayer && appState.players[activeSessionPlayer].completions.includes(String(lvl.id));
+        const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon', true);
 
         document.getElementById('levelModalContent').innerHTML = `
             <div class="modal-hero">
@@ -612,7 +626,7 @@
             </div>
             <div class="modal-body">
                 <div class="stats-grid">
-                    <div class="stat-box"><div class="label">Difficulty</div><div class="value">${escapeHtml(lvl.difficulty || 'Demon')}</div></div>
+                    <div class="stat-box"><div class="label">Difficulty</div><div class="value">${diffBadgeHtml}</div></div>
                     <div class="stat-box"><div class="label">Point Value</div><div class="value" style="color: var(--accent);">${pts.toFixed(2)} pts</div></div>
                     <div class="stat-box"><div class="label">Total Victors</div><div class="value">${victors.length}</div></div>
                 </div>
@@ -705,12 +719,7 @@
 
         container.innerHTML = list.map((lvl, index) => {
             const rank = index + 1;
-            
-            let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
-            if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
-            if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
-            if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
-
+            const thumbUrl = getLevelThumbnail(lvl);
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('');
@@ -743,7 +752,8 @@
         const player = appState.viewingPlayer;
         if (!player || !appState.players[player]) {
             document.getElementById('playerProfileTitle').textContent = "Select a Profile";
-            document.getElementById('playerProfileStats').textContent = "Click any player on the leaderboard above to view their progress";
+            document.getElementById('playerProfileStatsText').textContent = "Click any player on the leaderboard above to view their progress";
+            document.getElementById('profileCountsRow').innerHTML = "";
             document.getElementById('playerPersonalList').innerHTML = "";
             return;
         }
@@ -753,7 +763,26 @@
         const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
 
         document.getElementById('playerProfileTitle').textContent = `${player}'s Profile`;
-        document.getElementById('playerProfileStats').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} Completed Levels`;
+        document.getElementById('playerProfileStatsText').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} Completed Levels`;
+
+        // Calculate counts for each difficulty
+        let counts = { easy: 0, medium: 0, hard: 0, insane: 0, extreme: 0 };
+        beatenLevels.forEach(lvl => {
+            const s = String(lvl.difficulty || 'Easy Demon').toLowerCase();
+            if (s.includes('medium')) counts.medium++;
+            else if (s.includes('hard') && !s.includes('extreme')) counts.hard++;
+            else if (s.includes('insane')) counts.insane++;
+            else if (s.includes('extreme')) counts.extreme++;
+            else counts.easy++;
+        });
+
+        document.getElementById('profileCountsRow').innerHTML = `
+            <div class="profile-count-item"><img src="easy.png" alt="Easy" onerror="this.replaceWith('Easy:')"> ${counts.easy}</div>
+            <div class="profile-count-item"><img src="medium.png" alt="Medium" onerror="this.replaceWith('Medium:')"> ${counts.medium}</div>
+            <div class="profile-count-item"><img src="hard.png" alt="Hard" onerror="this.replaceWith('Hard:')"> ${counts.hard}</div>
+            <div class="profile-count-item"><img src="insane.png" alt="Insane" onerror="this.replaceWith('Insane:')"> ${counts.insane}</div>
+            <div class="profile-count-item"><img src="extreme.png" alt="Extreme" onerror="this.replaceWith('Extreme:')"> ${counts.extreme}</div>
+        `;
 
         const personalListEl = document.getElementById('playerPersonalList');
         if (beatenLevels.length === 0) {
@@ -763,12 +792,7 @@
 
         personalListEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
-            
-            let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
-            if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
-            if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
-            if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
-
+            const thumbUrl = getLevelThumbnail(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
 
             return `
@@ -815,12 +839,7 @@
 
         listEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
-            
-            let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
-            if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
-            if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
-            if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
-
+            const thumbUrl = getLevelThumbnail(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
 
             return `
