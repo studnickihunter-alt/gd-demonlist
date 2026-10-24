@@ -280,7 +280,8 @@
     const SPECIAL_LEVELS = [
         { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "deadlocked.png" },
         { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "toe2.png" },
-        { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "clubstep.png" }
+        { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "clubstep.png" },
+        { id: "cantletgo", name: "Can't Let Go", creator: "RobTop", difficulty: "Impossible, Nobody has ever done it before", points: 0.00, thumb: "cantletgo.png" }
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
@@ -590,13 +591,15 @@
     function getDifficultyBadgeHtml(diffStr, isModal = false) {
         const s = String(diffStr).toLowerCase();
         let imgName = 'easy.png';
-        if (s.includes('medium')) imgName = 'medium.png';
+        if (s.includes('impossible') || s.includes('nobody has ever done it before')) imgName = 'austin.png';
+        else if (s.includes('medium')) imgName = 'medium.png';
         else if (s.includes('hard') && !s.includes('extreme')) imgName = 'hard.png';
         else if (s.includes('insane')) imgName = 'insane.png';
         else if (s.includes('extreme')) imgName = 'extreme.png';
 
         const cssClass = isModal ? 'modal-diff-img' : 'badge-diff-img';
-        return `<img class="${cssClass}" src="${imgName}" alt="${diffStr}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${diffStr}'));">`;
+        const safeAlt = escapeHtml(diffStr);
+        return `<img class="${cssClass}" src="${imgName}" alt="${safeAlt}" title="${safeAlt}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${safeAlt}'));">`;
     }
 
     function getLevelThumbnail(lvl) {
@@ -626,7 +629,7 @@
             </div>
             <div class="modal-body">
                 <div class="stats-grid">
-                    <div class="stat-box"><div class="label">Difficulty</div><div class="value">${diffBadgeHtml}</div></div>
+                    <div class="stat-box"><div class="label">Difficulty</div><div class="value" style="flex-direction: column; font-size: 0.75rem;">${diffBadgeHtml}<span>${escapeHtml(lvl.difficulty || 'Demon')}</span></div></div>
                     <div class="stat-box"><div class="label">Point Value</div><div class="value" style="color: var(--accent);">${pts.toFixed(2)} pts</div></div>
                     <div class="stat-box"><div class="label">Total Victors</div><div class="value">${victors.length}</div></div>
                 </div>
@@ -766,10 +769,11 @@
         document.getElementById('playerProfileStatsText').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} Completed Levels`;
 
         // Calculate counts for each difficulty
-        let counts = { easy: 0, medium: 0, hard: 0, insane: 0, extreme: 0 };
+        let counts = { easy: 0, medium: 0, hard: 0, insane: 0, extreme: 0, impossible: 0 };
         beatenLevels.forEach(lvl => {
             const s = String(lvl.difficulty || 'Easy Demon').toLowerCase();
-            if (s.includes('medium')) counts.medium++;
+            if (s.includes('impossible') || s.includes('nobody has ever done it before')) counts.impossible++;
+            else if (s.includes('medium')) counts.medium++;
             else if (s.includes('hard') && !s.includes('extreme')) counts.hard++;
             else if (s.includes('insane')) counts.insane++;
             else if (s.includes('extreme')) counts.extreme++;
@@ -782,6 +786,7 @@
             <div class="profile-count-item"><img src="hard.png" alt="Hard" onerror="this.replaceWith('Hard:')"> ${counts.hard}</div>
             <div class="profile-count-item"><img src="insane.png" alt="Insane" onerror="this.replaceWith('Insane:')"> ${counts.insane}</div>
             <div class="profile-count-item"><img src="extreme.png" alt="Extreme" onerror="this.replaceWith('Extreme:')"> ${counts.extreme}</div>
+            <div class="profile-count-item"><img src="austin.png" alt="Impossible" title="Impossible, Nobody has ever done it before" onerror="this.replaceWith('Impossible:')"> ${counts.impossible}</div>
         `;
 
         const personalListEl = document.getElementById('playerPersonalList');
