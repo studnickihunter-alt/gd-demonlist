@@ -183,7 +183,7 @@
 <body>
 
 <header>
-    <div class="brand">DEMONLIST <span>CLOUD VIEWER</span></div>
+    <div class="brand">STUDMERLIST <span>CLOUD VIEWER</span></div>
     <div class="nav-tabs">
         <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main List</button>
         <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Profiles</button>
@@ -194,7 +194,6 @@
 <div class="container">
     <!-- VIEW 1: MAIN DEMONLIST -->
     <div id="mainListView" class="list-container">
-        <div class="list-banner"><div><h1>Official Custom Demonlist</h1></div></div>
         <div id="mainLevelsList" class="list-container"></div>
     </div>
 
@@ -221,13 +220,13 @@
         </div>
 
         <div class="panel">
-            <h2>Add Beaten Level</h2>
+            <h2>Add Completed Level</h2>
             <div class="form-group">
                 <label for="levelIdsInput">Level ID</label>
                 <input type="text" id="levelIdsInput" placeholder="e.g. 10565740">
             </div>
             <div class="form-group">
-                <label for="levelTierInput">Level Tier (Optional, must be format like 7.26)</label>
+                <label for="levelTierInput">Level Points (Optional, must be format like 7.26)</label>
                 <input type="text" id="levelTierInput" placeholder="e.g. 23.98">
             </div>
             <button style="width: 100%;" onclick="fetchAndAddLevel()" id="addBtn">Submit Completion</button>
