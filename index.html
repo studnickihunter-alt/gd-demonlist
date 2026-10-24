@@ -41,7 +41,7 @@
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            transition: background-image 0.3s ease-in-out, background-color 0.2s;
+            transition: background-color 0.2s;
         }
 
         header {
@@ -199,7 +199,6 @@
         .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 30px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
         .hidden { display: none !important; }
 
-        /* Hidden audio player container */
         #audioContainer { display: none; }
 
         /* Modal */
@@ -282,7 +281,7 @@
     </div>
 </div>
 
-<!-- Hidden container for playing YouTube audio on hover -->
+<!-- Hidden container for playing song audio on hover -->
 <div id="audioContainer"></div>
 
 <!-- Modal -->
@@ -313,7 +312,7 @@
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
     let bgResetTimer = null;
-    const videoIdCache = {};
+    const songIdCache = {};
 
     function setDynamicBackground(url) {
         if (bgResetTimer) clearTimeout(bgResetTimer);
@@ -323,7 +322,8 @@
 
     function clearDynamicBackground() {
         if (!lockedBackgroundUrl) {
-            // 2-second cooldown before switching back to normal white/body style
+            if (bgResetTimer) clearTimeout(bgResetTimer);
+            // 2-second cooldown before switching back to normal white background
             bgResetTimer = setTimeout(() => {
                 if (!lockedBackgroundUrl) {
                     document.body.style.backgroundImage = 'none';
@@ -336,17 +336,32 @@
     async function handleCardMouseEnter(lvl, url) {
         setDynamicBackground(url);
 
-        // Fetch and play audio from GDDL's YouTube video link
-        const ytId = await fetchGddlVideoId(lvl);
-        if (ytId) {
+        const strId = String(lvl.id);
+        if (SPECIAL_LEVELS.some(sp => String(sp.id) === strId)) return;
+
+        let songId = songIdCache[strId];
+        if (!songId) {
+            try {
+                const res = await fetch(`https://gdbrowser.com/api/level/${strId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.songID) {
+                        songId = data.songID;
+                        songIdCache[strId] = songId;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (songId) {
             const audioDiv = document.getElementById('audioContainer');
-            audioDiv.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&enablejsapi=1&rel=0" allow="autoplay"></iframe>`;
+            // Play song audio using GDBrowser's Newgrounds audio endpoint proxy
+            audioDiv.innerHTML = `<audio autoplay src="https://gdbrowser.com/api/song?id=${songId}"></audio>`;
         }
     }
 
     function handleCardMouseLeave() {
         clearDynamicBackground();
-        // Stop audio playback immediately when un-hovering
         document.getElementById('audioContainer').innerHTML = '';
     }
 
