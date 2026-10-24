@@ -142,12 +142,14 @@
         .form-group { margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
         .form-row { display: flex; gap: 6px; }
-        .form-row input { flex: 1; }
+        .form-row input { flex: 1; width: 100%; }
 
         .status-box { font-size: 0.78rem; padding: 8px; border-radius: 4px; margin-top: 6px; display: none; font-weight: 600; }
         .status-loading { display: block; background-color: rgba(77, 171, 247, 0.15); color: var(--accent); }
+        .status-error { display: block; background-color: rgba(220, 53, 69, 0.15); color: var(--danger); }
+        .status-success { display: block; background-color: rgba(43, 138, 62, 0.15); color: var(--success); }
 
-        .auth-bar { background-color: var(--bg-body); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 12px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .auth-bar { background-color: var(--bg-body); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
 
         .leaderboard-item {
             display: flex; justify-content: space-between; align-items: center;
@@ -213,7 +215,7 @@
 
     <!-- RIGHT SIDEBAR -->
     <aside class="sidebar">
-        <!-- Authentication Panel -->
+        <!-- Built-in Authentication Panel -->
         <div class="panel">
             <h2>Account Session</h2>
             <div id="authStatusContainer"></div>
@@ -244,7 +246,6 @@
 </div>
 
 <script>
-    // PRE-CONFIGURED WITH YOUR CLOUD BIN AND API KEY
     const BIN_ID = '6adc18bcffd5d1605387610c';
     const JSONBIN_API_KEY = '$2a$10$Q4c9o4Yst0RiOqrR7gzl6OrsAcpz87H1seYKYQd2gvk92nuv8fq7e';
 
@@ -327,47 +328,51 @@
         renderAll();
     }
 
-    function handleRegister() {
-        const name = prompt("Enter a new username to register:");
-        if (!name || !name.trim()) return;
-        const cleanName = name.trim();
-        if (appState.players[cleanName]) {
-            alert("Username already exists! Please log in.");
+    function handleRegisterSubmit() {
+        const username = document.getElementById('regUsername').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const msgBox = document.getElementById('authMsgBox');
+
+        if (!username || !password) {
+            msgBox.className = 'status-box status-error';
+            msgBox.textContent = "Please fill in both fields.";
             return;
         }
-        const pwd = prompt(`Create a secure password for "${cleanName}":`);
-        if (!pwd) return;
+        if (appState.players[username]) {
+            msgBox.className = 'status-box status-error';
+            msgBox.textContent = "Username already exists.";
+            return;
+        }
 
-        appState.players[cleanName] = { password: pwd, completions: [] };
-        appState.activePlayer = cleanName;
-        appState.viewingPlayer = cleanName;
+        appState.players[username] = { password: password, completions: [] };
+        appState.activePlayer = username;
+        appState.viewingPlayer = username;
+        msgBox.style.display = 'none';
         saveCloudData();
-        switchView('stats', cleanName);
+        switchView('stats', username);
     }
 
-    function handleLogin() {
-        const names = Object.keys(appState.players);
-        if (names.length === 0) {
-            alert("No accounts registered yet. Please register first!");
-            return;
-        }
-        const username = prompt("Enter your account username:\n" + names.join(", "));
-        if (!username || !appState.players[username.trim()]) {
-            if (username) alert("Account not found.");
-            return;
-        }
-        const cleanName = username.trim();
-        const pwd = prompt(`Enter password for "${cleanName}":`);
-        if (pwd === null) return;
+    function handleLoginSubmit() {
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const msgBox = document.getElementById('authMsgBox');
 
-        if (appState.players[cleanName].password === pwd) {
-            appState.activePlayer = cleanName;
-            appState.viewingPlayer = cleanName;
-            saveCloudData();
-            switchView('stats', cleanName);
-        } else {
-            alert("Incorrect password!");
+        if (!username || !password) {
+            msgBox.className = 'status-box status-error';
+            msgBox.textContent = "Please enter username and password.";
+            return;
         }
+        if (!appState.players[username] || appState.players[username].password !== password) {
+            msgBox.className = 'status-box status-error';
+            msgBox.textContent = "Invalid username or password.";
+            return;
+        }
+
+        appState.activePlayer = username;
+        appState.viewingPlayer = username;
+        msgBox.style.display = 'none';
+        saveCloudData();
+        switchView('stats', username);
     }
 
     function handleLogout() {
@@ -384,7 +389,7 @@
             alert("You cannot delete the admin account!");
             return;
         }
-        if (!confirm(`Admin Action: Permanently delete account "${targetName}"?`)) return;
+        if (!confirm(`Permanently delete account "${targetName}"?`)) return;
 
         delete appState.players[targetName];
         if (appState.viewingPlayer === targetName) {
@@ -436,10 +441,10 @@
         let points = 25.00;
 
         try {
+            // Updated endpoint structure targeting GDDL public data structures
             const res = await fetch(`https://gdladder.com/api/level/${levelId}`);
             if (res.ok) {
                 const data = await res.json();
-                // Deep extraction for accurate GDDL point ratings
                 const rawRating = data.rating ?? data.Rating ?? data.Tier ?? data.tier ?? data.score ?? data.Score;
                 if (rawRating !== undefined && rawRating !== null && !isNaN(rawRating)) {
                     points = parseFloat(Number(rawRating).toFixed(2));
@@ -452,7 +457,7 @@
                 }
             }
         } catch (e) {
-            console.warn("GDDL API direct fetch warning", e);
+            console.warn("GDDL API fetch warning", e);
         }
 
         if (name === `Level ${levelId}` || creator === "Unknown") {
@@ -505,6 +510,7 @@
             await saveCloudData();
         } catch (err) {
             statusBox.textContent = "Error fetching level data.";
+            statusBox.className = 'status-box status-error';
             console.error(err);
         }
         addBtn.disabled = false;
@@ -609,9 +615,18 @@
             `;
         } else {
             container.innerHTML = `
-                <div style="display: flex; gap: 8px;">
-                    <button style="flex: 1;" onclick="handleLogin()">Log In</button>
-                    <button class="btn-secondary" style="flex: 1;" onclick="handleRegister()">Register</button>
+                <div id="authMsgBox" style="display:none; margin-bottom: 8px;"></div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <input type="text" id="loginUsername" placeholder="Username">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <input type="password" id="loginPassword" placeholder="Password">
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button style="flex: 1;" onclick="handleLoginSubmit()">Log In</button>
+                        <button class="btn-secondary" style="flex: 1;" onclick="handleRegisterSubmit()">Register</button>
+                    </div>
                 </div>
             `;
         }
