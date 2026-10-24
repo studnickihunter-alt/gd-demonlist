@@ -34,7 +34,6 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
         
-        /* Dynamic Background support with smooth transition */
         body {
             background-color: var(--bg-body);
             color: var(--text-main);
@@ -200,6 +199,9 @@
         .empty-state { background-color: var(--bg-card); border-radius: 4px; padding: 30px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); }
         .hidden { display: none !important; }
 
+        /* Hidden audio player container */
+        #audioContainer { display: none; }
+
         /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 12px; }
         .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
@@ -280,6 +282,9 @@
     </div>
 </div>
 
+<!-- Hidden container for playing YouTube audio on hover -->
+<div id="audioContainer"></div>
+
 <!-- Modal -->
 <div id="levelModal" class="modal-overlay hidden" onclick="closeModalOnBg(event)">
     <div class="modal-card" id="levelModalContent"></div>
@@ -306,31 +311,43 @@
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
-    let lockedBackgroundUrl = null; // Stores background when clicked/pressed
+    let lockedBackgroundUrl = null;
+    let bgResetTimer = null;
     const videoIdCache = {};
 
     function setDynamicBackground(url) {
+        if (bgResetTimer) clearTimeout(bgResetTimer);
         document.body.style.backgroundImage = `url('${url}')`;
         document.body.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
     }
 
     function clearDynamicBackground() {
         if (!lockedBackgroundUrl) {
-            document.body.style.backgroundImage = 'none';
-            document.body.style.backgroundColor = '';
+            // 2-second cooldown before switching back to normal white/body style
+            bgResetTimer = setTimeout(() => {
+                if (!lockedBackgroundUrl) {
+                    document.body.style.backgroundImage = 'none';
+                    document.body.style.backgroundColor = '';
+                }
+            }, 2000);
         }
     }
 
-    function handleCardMouseEnter(url) {
-        if (!lockedBackgroundUrl) {
-            setDynamicBackground(url);
+    async function handleCardMouseEnter(lvl, url) {
+        setDynamicBackground(url);
+
+        // Fetch and play audio from GDDL's YouTube video link
+        const ytId = await fetchGddlVideoId(lvl);
+        if (ytId) {
+            const audioDiv = document.getElementById('audioContainer');
+            audioDiv.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&enablejsapi=1&rel=0" allow="autoplay"></iframe>`;
         }
     }
 
     function handleCardMouseLeave() {
-        if (!lockedBackgroundUrl) {
-            clearDynamicBackground();
-        }
+        clearDynamicBackground();
+        // Stop audio playback immediately when un-hovering
+        document.getElementById('audioContainer').innerHTML = '';
     }
 
     function handleCardClick(url, event) {
@@ -340,7 +357,6 @@
     }
 
     function checkBackgroundReset(event) {
-        // If mouse moves outside the container area (hovering on side margins) and no card is clicked-lock, reset background
         const container = document.getElementById('mainContainer');
         const rect = container.getBoundingClientRect();
         if (event.clientX < rect.left || event.clientX > rect.right) {
@@ -860,7 +876,7 @@
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter('${thumbUrl}')" 
+                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${thumbUrl}')" 
                          onmouseleave="handleCardMouseLeave()" 
                          onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
@@ -936,7 +952,7 @@
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter('${thumbUrl}')" 
+                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${thumbUrl}')" 
                          onmouseleave="handleCardMouseLeave()" 
                          onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
@@ -988,7 +1004,7 @@
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter('${thumbUrl}')" 
+                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${thumbUrl}')" 
                          onmouseleave="handleCardMouseLeave()" 
                          onclick="handleCardClick('${thumbUrl}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
