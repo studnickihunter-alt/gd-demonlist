@@ -115,9 +115,9 @@
         .level-card.rank-3 { background: linear-gradient(135deg, #f9e2cc 0%, #e0ab76 100%); }
         .level-card.rank-top10 { background: linear-gradient(135deg, #ffe5ec 0%, #ffb3c6 100%); }
 
-        /* Golden Border for Beaten Levels */
+        /* Golden Border for Beaten Levels (Twice as thick: 6px) */
         .level-card.beaten-level {
-            border: 3px solid #ffd700 !important;
+            border: 6px solid #ffd700 !important;
             box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
         }
 
@@ -125,8 +125,9 @@
         @media (min-width: 650px) { .level-thumb-wrapper { width: 225px; min-width: 225px; height: auto; } }
         .level-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+        /* Twice as large: 64px */
         .check-overlay {
-            position: absolute; top: 6px; left: 6px; width: 32px; height: 32px;
+            position: absolute; top: 6px; left: 6px; width: 64px; height: 64px;
             object-fit: contain; z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
         }
 
@@ -160,7 +161,6 @@
         .badge-diff-img { height: 26px; width: auto; display: block; }
         .modal-diff-img { height: 34px; width: auto; display: block; }
         .badge-points { background-color: rgba(0, 102, 204, 0.12); color: var(--accent); }
-        .badge-mainrank { background-color: rgba(108, 117, 125, 0.15); color: var(--text-muted); }
 
         .panel { background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
         @media(min-width: 650px) { .panel { padding: 20px; } }
@@ -196,15 +196,14 @@
         /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 12px; }
         .modal-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
-        .modal-hero { position: relative; height: 180px; background-color: #000; overflow: hidden; }
-        @media(min-width: 600px) { .modal-hero { height: 210px; } }
-        .modal-hero img { width: 100%; height: 100%; object-fit: cover; opacity: 0.75; }
-        .modal-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)); color: #fff; }
-        .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.65); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .modal-hero { position: relative; height: 260px; background-color: #000; overflow: hidden; }
+        @media(min-width: 600px) { .modal-hero { height: 320px; } }
+        .modal-hero img, .modal-hero iframe { width: 100%; height: 100%; object-fit: cover; border: none; display: block; }
+        .modal-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)); color: #fff; pointer-events: none; }
+        .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.65); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 20; }
         .modal-body { padding: 18px; }
         @media(min-width: 600px) { .modal-body { padding: 24px; } }
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
-        @media(min-width: 500px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
         .stat-box { background-color: var(--bg-body); border: 1px solid var(--border); border-radius: 4px; padding: 10px; text-align: center; }
         .stat-box .label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
         .stat-box .value { font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; }
@@ -267,8 +266,7 @@
 
         <div class="list-banner" style="border-left-color: #2b8a3e;">
             <div>
-                <h1 style="font-size: 1.2rem;" id="accountPersonalTitle">Your Completed Levels</h1>
-                <p>Strictly ranked hardest to easiest</p>
+                <h1 style="font-size: 1.2rem;" id="accountPersonalTitle">Your Levels</h1>
             </div>
         </div>
         <div id="accountPersonalList" class="list-container"></div>
@@ -293,7 +291,6 @@
         players: {}
     };
 
-    // PERMANENT SPECIAL LEVELS WITH THEIR CUSTOM IMAGE FILENAMES
     const SPECIAL_LEVELS = [
         { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "deadlocked.png" },
         { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "toe2.png" },
@@ -302,6 +299,7 @@
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
+    const videoIdCache = {};
 
     async function loadCloudData() {
         try {
@@ -600,6 +598,7 @@
 
     function closeLevelModal() {
         appState.activeModalLevelId = null;
+        document.getElementById('levelModalContent').innerHTML = '';
         document.getElementById('levelModal').classList.add('hidden');
     }
 
@@ -641,7 +640,44 @@
         );
     }
 
-    function renderModalContent(levelId) {
+    function extractYoutubeId(str) {
+        if (!str) return null;
+        const s = String(str).trim();
+        if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+        const m = s.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        return m ? m[1] : null;
+    }
+
+    async function fetchGddlVideoId(levelObj) {
+        const strId = String(levelObj.id);
+        if (SPECIAL_LEVELS.some(sp => String(sp.id) === strId)) return null;
+        if (videoIdCache[strId]) return videoIdCache[strId];
+
+        const endpoints = [
+            `https://gdladder.com/api/level/${strId}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://gdladder.com/api/level/${strId}`)}`,
+            `https://corsproxy.io/?${encodeURIComponent(`https://gdladder.com/api/level/${strId}`)}`
+        ];
+
+        for (const url of endpoints) {
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    const showcase = data.Showcase || data.showcase || data.Meta?.Showcase || data.meta?.showcase || data.video || data.Video;
+                    const ytId = extractYoutubeId(showcase);
+                    if (ytId) {
+                        videoIdCache[strId] = ytId;
+                        return ytId;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        return null;
+    }
+
+    async function renderModalContent(levelId) {
         const lvl = appState.levels.find(l => String(l.id) === String(levelId));
         if (!lvl) return;
         const rank = appState.levels.indexOf(lvl) + 1;
@@ -650,12 +686,13 @@
         const victors = getVictorsForLevel(lvl.id);
         const isBeatenByMe = isBeatenByActiveUser(lvl.id);
         const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon', true);
+        const isSpecial = SPECIAL_LEVELS.some(sp => String(sp.id) === String(lvl.id));
 
         document.getElementById('levelModalContent').innerHTML = `
-            <div class="modal-hero">
+            <div class="modal-hero" id="modalHeroContainer">
                 <img src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
                 <button class="modal-close" onclick="closeLevelModal()">✕</button>
-                <div class="modal-hero-overlay">
+                <div class="modal-hero-overlay" id="modalHeroOverlay">
                     <div style="font-size: 1.3rem; font-weight: 800;">#${rank} – ${escapeHtml(lvl.name)}</div>
                     <div style="font-size: 0.85rem; opacity: 0.85; font-weight: 600;">by ${escapeHtml(lvl.creator)} • ID: ${escapeHtml(lvl.id)}</div>
                 </div>
@@ -664,7 +701,6 @@
                 <div class="stats-grid">
                     <div class="stat-box"><div class="label">Difficulty</div><div class="value" style="flex-direction: column; font-size: 0.75rem;">${diffBadgeHtml}<span>${escapeHtml(lvl.difficulty || 'Demon')}</span></div></div>
                     <div class="stat-box"><div class="label">Point Value</div><div class="value" style="color: var(--accent);">${pts.toFixed(2)} pts</div></div>
-                    <div class="stat-box"><div class="label">Total Victors</div><div class="value">${victors.length}</div></div>
                 </div>
                 <div style="margin-bottom: 14px;">
                     <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Victors:</span>
@@ -675,13 +711,26 @@
                 <div class="modal-footer">
                     ${activeSessionPlayer ? `
                         <button class="${isBeatenByMe ? 'btn-danger' : ''}" onclick="toggleVictor('${lvl.id}')">
-                            ${isBeatenByMe ? 'Remove Me as Victor' : '+ Mark Completed For Myself'}
+                            ${isBeatenByMe ? 'Remove Completion' : '+ Mark Completed For Myself'}
                         </button>
                     ` : `<span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Log into account tab to modify victors</span>`}
                     <button class="btn-secondary" onclick="closeLevelModal()">Close</button>
                 </div>
             </div>
         `;
+
+        if (!isSpecial) {
+            const ytId = await fetchGddlVideoId(lvl);
+            if (ytId && appState.activeModalLevelId === String(levelId)) {
+                const heroContainer = document.getElementById('modalHeroContainer');
+                if (heroContainer) {
+                    heroContainer.innerHTML = `
+                        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+                        <button class="modal-close" onclick="closeLevelModal()">✕</button>
+                    `;
+                }
+            }
+        }
     }
 
     function renderAll() {
@@ -852,7 +901,6 @@
                         </div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
-                            <span class="badge badge-mainrank">Main List #${lvl.mainRank}</span>
                             <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                         </div>
                     </div>
@@ -866,12 +914,12 @@
         const listEl = document.getElementById('accountPersonalList');
 
         if (!activeSessionPlayer || !appState.players[activeSessionPlayer]) {
-            titleEl.textContent = "Your Completed Levels";
+            titleEl.textContent = "Your Levels";
             listEl.innerHTML = `<div class="empty-state"><h3>Not Logged In</h3><p style="margin-top:6px;">Log into your account above to view your list.</p></div>`;
             return;
         }
 
-        titleEl.textContent = `${activeSessionPlayer}'s Completed Levels`;
+        titleEl.textContent = `${activeSessionPlayer}'s Levels`;
         const data = appState.players[activeSessionPlayer];
         const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
 
@@ -902,7 +950,6 @@
                         </div>
                         <div class="level-meta">
                             <span class="badge badge-diff">${diffBadgeHtml}</span>
-                            <span class="badge badge-mainrank">Main List #${lvl.mainRank}</span>
                             <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                         </div>
                     </div>
