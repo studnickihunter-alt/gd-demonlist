@@ -447,11 +447,12 @@
         let points = 25.00;
 
         try {
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://gdladder.com/api/level/${levelId}`)}`;
+            // Using the correct plural /api/levels/ endpoint path
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://gdladder.com/api/levels/${levelId}`)}`;
             const res = await fetch(proxyUrl);
             if (res.ok) {
                 const data = await res.json();
-                const rawRating = data.rating ?? data.Rating ?? data.Tier ?? data.tier ?? data.score ?? data.Score;
+                const rawRating = data.rating ?? data.Rating ?? data.Tier ?? data.tier ?? data.score ?? data.Score ?? data.ratingValue;
                 if (rawRating !== undefined && rawRating !== null && !isNaN(rawRating)) {
                     points = parseFloat(Number(rawRating).toFixed(2));
                 }
