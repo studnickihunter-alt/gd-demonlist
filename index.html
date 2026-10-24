@@ -126,8 +126,8 @@
         .victor-tag:hover { text-decoration: underline; }
 
         .level-meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; }
-        .badge-diff { background-color: #343a40; color: #fff; }
+        .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; display: flex; align-items: center; }
+        .badge-diff-img { height: 18px; width: auto; display: block; }
         .badge-points { background-color: rgba(0, 102, 204, 0.12); color: var(--accent); }
         .badge-mainrank { background-color: rgba(108, 117, 125, 0.15); color: var(--text-muted); }
 
@@ -261,7 +261,13 @@
         players: {}
     };
 
-    // ACTIVE SESSION TOKEN IS SESSION-BASED (CLEARS ON PAGE RELOAD)
+    // PERMANENT SPECIAL LEVELS (DEADLOCKED, TOE2, CLUBSTEP)
+    const SPECIAL_LEVELS = [
+        { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "https://gdbrowser.com/assets/difficulties/demons/easy.png" },
+        { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "https://gdbrowser.com/assets/difficulties/demons/easy.png" },
+        { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "https://gdbrowser.com/assets/difficulties/demons/easy.png" }
+    ];
+
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
 
     async function loadCloudData() {
@@ -281,6 +287,13 @@
         
         if (!appState.players) appState.players = {};
         if (!appState.levels) appState.levels = [];
+
+        // Ensure special levels are always included in memory
+        SPECIAL_LEVELS.forEach(sp => {
+            if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
+                appState.levels.push(sp);
+            }
+        });
 
         const names = Object.keys(appState.players);
         if (names.length > 0 && !appState.viewingPlayer) {
@@ -405,10 +418,20 @@
 
     function purgeUnusedLevels() {
         appState.levels = appState.levels.filter(lvl => {
+            // Special levels always stay
+            if (SPECIAL_LEVELS.some(sp => String(sp.id) === String(lvl.id))) return true;
+            
             for (let p in appState.players) {
                 if (appState.players[p].completions.includes(String(lvl.id))) return true;
             }
             return false;
+        });
+
+        // Ensure special levels are present even if un-purged elsewhere
+        SPECIAL_LEVELS.forEach(sp => {
+            if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
+                appState.levels.push(sp);
+            }
         });
     }
 
@@ -442,7 +465,7 @@
     async function fetchBasicLevelData(levelId) {
         let name = `Level ${levelId}`;
         let creator = "Unknown";
-        let difficulty = "Extreme Demon";
+        let difficulty = "Easy Demon";
 
         try {
             const gdbRes = await fetch(`https://gdbrowser.com/api/level/${levelId}`);
@@ -474,7 +497,6 @@
 
         if (!id) return;
 
-        // Validation for exact two decimal points if tier is provided
         let customPoints = null;
         if (tierVal !== "") {
             const regex = /^\d+\.\d{2}$/;
@@ -503,8 +525,6 @@
                     points: customPoints !== null ? customPoints : 0.00
                 };
                 appState.levels.push(levelObj);
-            } else {
-                // If level already exists, ignore new point value per your rule
             }
 
             const comps = appState.players[activeSessionPlayer].completions;
@@ -534,7 +554,6 @@
         const idx = comps.indexOf(strId);
 
         if (idx > -1) {
-            // Already signed in, so no prompt needed to remove self
             comps.splice(idx, 1);
         } else {
             comps.push(strId);
@@ -557,12 +576,28 @@
 
     function closeModalOnBg(event) { if (event.target.id === 'levelModal') closeLevelModal(); }
 
+    function getDifficultyBadgeHtml(diffStr) {
+        const s = String(diffStr).toLowerCase();
+        let imgName = 'easy.png';
+        if (s.includes('medium')) imgName = 'medium.png';
+        else if (s.includes('hard') && !s.includes('extreme')) imgName = 'hard.png';
+        else if (s.includes('insane')) imgName = 'insane.png';
+        else if (s.includes('extreme')) imgName = 'extreme.png';
+
+        return `<img class="badge-diff-img" src="${imgName}" alt="${diffStr}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${diffStr}'));">`;
+    }
+
     function renderModalContent(levelId) {
         const lvl = appState.levels.find(l => String(l.id) === String(levelId));
         if (!lvl) return;
         const rank = appState.levels.indexOf(lvl) + 1;
         const pts = getLevelPoints(lvl);
-        const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+        
+        let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+        if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
+        if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
+        if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
+
         const victors = getVictorsForLevel(lvl.id);
         const isBeatenByMe = activeSessionPlayer && appState.players[activeSessionPlayer].completions.includes(String(lvl.id));
 
@@ -670,10 +705,16 @@
 
         container.innerHTML = list.map((lvl, index) => {
             const rank = index + 1;
-            const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            
+            let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
+            if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
+            if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
+
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('');
+            const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
 
             return `
                 <article class="level-card" onclick="openLevelModal('${lvl.id}')">
@@ -689,7 +730,7 @@
                         </div>
                         <div class="victors-row"><span class="victors-label">Victors (${victors.length}):</span> ${victorsHtml}</div>
                         <div class="level-meta">
-                            <span class="badge badge-diff">${escapeHtml(lvl.difficulty || 'Demon')}</span>
+                            <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-points">${pts.toFixed(2)} pts</span>
                         </div>
                     </div>
@@ -722,7 +763,14 @@
 
         personalListEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
-            const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            
+            let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
+            if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
+            if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
+
+            const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
+
             return `
                 <article class="level-card" onclick="openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
@@ -736,7 +784,7 @@
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
                         <div class="level-meta">
-                            <span class="badge badge-diff">${escapeHtml(lvl.difficulty || 'Demon')}</span>
+                            <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-mainrank">Main List #${lvl.mainRank}</span>
                             <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                         </div>
@@ -767,7 +815,14 @@
 
         listEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
-            const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            
+            let thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            if (lvl.id === 'deadlocked') thumbUrl = 'https://i.ytimg.com/vi/6pZt14j8t1g/maxresdefault.jpg';
+            if (lvl.id === 'toe2') thumbUrl = 'https://i.ytimg.com/vi/bFqg5K2o9kU/maxresdefault.jpg';
+            if (lvl.id === 'clubstep') thumbUrl = 'https://i.ytimg.com/vi/nCq8R0Z1x9s/maxresdefault.jpg';
+
+            const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
+
             return `
                 <article class="level-card" onclick="openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
@@ -781,7 +836,7 @@
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
                         <div class="level-meta">
-                            <span class="badge badge-diff">${escapeHtml(lvl.difficulty || 'Demon')}</span>
+                            <span class="badge badge-diff">${diffBadgeHtml}</span>
                             <span class="badge badge-mainrank">Main List #${lvl.mainRank}</span>
                             <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                         </div>
