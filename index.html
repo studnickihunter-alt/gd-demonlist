@@ -151,10 +151,11 @@
 
         .leaderboard-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 10px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 4px;
+            padding: 8px 10px; border-bottom: 1px solid var(--border); border-radius: 4px; gap: 6px;
         }
         .leaderboard-item:hover { background-color: rgba(0, 102, 204, 0.08); }
         .leaderboard-item.active { background-color: rgba(0, 102, 204, 0.15); border-left: 3px solid var(--accent); }
+        .lb-info { display: flex; justify-content: space-between; align-items: center; flex-grow: 1; cursor: pointer; }
         .lb-rank-name { font-weight: 700; font-size: 0.85rem; }
         .lb-pts { font-size: 0.78rem; font-weight: 800; color: var(--accent); }
 
@@ -243,7 +244,7 @@
 </div>
 
 <script>
-    // JSONBIN CREDENTIALS (REPLACE WITH YOUR KEYS)
+    // PRE-CONFIGURED WITH YOUR CLOUD BIN AND API KEY
     const BIN_ID = '6adc18bcffd5d1605387610c';
     const JSONBIN_API_KEY = '$2a$10$Q4c9o4Yst0RiOqrR7gzl6OrsAcpz87H1seYKYQd2gvk92nuv8fq7e';
 
@@ -254,24 +255,22 @@
         activePlayer: null,
         activeModalLevelId: null,
         levels: [],
-        players: {} // format: { "PlayerName": { password: "...", completions: ["id1", "id2"] } }
+        players: {}
     };
 
     const DIFF_WEIGHTS = { 'Extreme Demon': 25.00, 'Insane Demon': 17.00, 'Hard Demon': 12.00, 'Medium Demon': 7.00, 'Easy Demon': 2.00 };
 
     async function loadCloudData() {
-        if (BIN_ID !== 'YOUR_BIN_ID_HERE') {
-            try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.record) appState = data.record;
-                }
-            } catch (e) {
-                console.error("Cloud load error", e);
+        try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': JSONBIN_API_KEY }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.record) appState = data.record;
             }
+        } catch (e) {
+            console.error("Cloud load error", e);
         }
         
         if (!appState.players) appState.players = {};
@@ -298,7 +297,6 @@
         sortLevelsHardestFirst();
         renderAll();
 
-        if (BIN_ID === 'YOUR_BIN_ID_HERE') return;
         try {
             await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                 method: 'PUT',
@@ -377,6 +375,24 @@
         saveCloudData();
     }
 
+    function adminDeleteAccount(targetName) {
+        if (appState.activePlayer !== 'HunterAdmin') {
+            alert("Only HunterAdmin can delete accounts!");
+            return;
+        }
+        if (targetName === 'HunterAdmin') {
+            alert("You cannot delete the admin account!");
+            return;
+        }
+        if (!confirm(`Admin Action: Permanently delete account "${targetName}"?`)) return;
+
+        delete appState.players[targetName];
+        if (appState.viewingPlayer === targetName) {
+            appState.viewingPlayer = Object.keys(appState.players)[0] || null;
+        }
+        saveCloudData();
+    }
+
     function purgeUnusedLevels() {
         appState.levels = appState.levels.filter(lvl => {
             for (let p in appState.players) {
@@ -423,7 +439,8 @@
             const res = await fetch(`https://gdladder.com/api/level/${levelId}`);
             if (res.ok) {
                 const data = await res.json();
-                const rawRating = data.rating ?? data.Rating ?? data.tier ?? data.Tier;
+                // Deep extraction for accurate GDDL point ratings
+                const rawRating = data.rating ?? data.Rating ?? data.Tier ?? data.tier ?? data.score ?? data.Score;
                 if (rawRating !== undefined && rawRating !== null && !isNaN(rawRating)) {
                     points = parseFloat(Number(rawRating).toFixed(2));
                 }
@@ -434,7 +451,9 @@
                     if (meta.Difficulty || meta.difficulty) difficulty = meta.Difficulty || meta.difficulty;
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn("GDDL API direct fetch warning", e);
+        }
 
         if (name === `Level ${levelId}` || creator === "Unknown") {
             try {
@@ -584,7 +603,7 @@
         if (appState.activePlayer) {
             container.innerHTML = `
                 <div class="auth-bar">
-                    <span>Logged in as: <strong>${escapeHtml(appState.activePlayer)}</strong></span>
+                    <span>Logged in as: <strong>${escapeHtml(appState.activePlayer)}</strong> ${appState.activePlayer === 'HunterAdmin' ? '(Admin)' : ''}</span>
                     <button class="btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="handleLogout()">Log Out</button>
                 </div>
             `;
@@ -606,9 +625,19 @@
 
         if (playersSorted.length === 0) { container.innerHTML = `<p style="font-size:0.8rem; color:var(--text-muted);">No accounts registered.</p>`; return; }
 
+        const isAdmin = appState.activePlayer === 'HunterAdmin';
+
         container.innerHTML = playersSorted.map((p, idx) => {
             const isSelected = appState.viewingPlayer === p.name;
-            return `<div class="leaderboard-item ${isSelected ? 'active' : ''}" onclick="switchView('stats', '${escapeHtml(p.name)}')"><span class="lb-rank-name">#${idx + 1} ${escapeHtml(p.name)} ${appState.activePlayer === p.name ? '(You)' : ''}</span><span class="lb-pts">${p.pts.toFixed(2)} pts</span></div>`;
+            return `
+                <div class="leaderboard-item ${isSelected ? 'active' : ''}">
+                    <div class="lb-info" onclick="switchView('stats', '${escapeHtml(p.name)}')">
+                        <span class="lb-rank-name">#${idx + 1} ${escapeHtml(p.name)} ${appState.activePlayer === p.name ? '(You)' : ''}</span>
+                        <span class="lb-pts">${p.pts.toFixed(2)} pts</span>
+                    </div>
+                    ${isAdmin && p.name !== 'HunterAdmin' ? `<button class="btn-danger" style="padding: 2px 6px; font-size: 0.65rem;" onclick="adminDeleteAccount('${escapeHtml(p.name)}')">Delete</button>` : ''}
+                </div>
+            `;
         }).join('');
     }
 
