@@ -268,18 +268,16 @@
             });
             if (res.ok) {
                 const data = await res.json();
-                if (data.record) appState = data.record;
+                if (data.record && Object.keys(data.record).length > 0) {
+                    appState = data.record;
+                }
             }
         } catch (e) {
             console.error("Cloud load error", e);
         }
         
         if (!appState.players) appState.players = {};
-        for (let p in appState.players) {
-            if (Array.isArray(appState.players[p])) {
-                appState.players[p] = { password: 'password123', completions: appState.players[p] };
-            }
-        }
+        if (!appState.levels) appState.levels = [];
 
         const names = Object.keys(appState.players);
         if (names.length > 0 && !appState.viewingPlayer) {
@@ -329,8 +327,8 @@
     }
 
     function handleRegisterSubmit() {
-        const username = document.getElementById('regUsername').value.trim();
-        const password = document.getElementById('regPassword').value;
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
         const msgBox = document.getElementById('authMsgBox');
 
         if (!username || !password) {
@@ -350,6 +348,8 @@
         appState.activePlayer = username;
         appState.viewingPlayer = username;
         msgBox.style.display = 'none';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
         saveCloudData();
         switchView('stats', username);
     }
@@ -375,6 +375,8 @@
         appState.activePlayer = username;
         appState.viewingPlayer = username;
         msgBox.style.display = 'none';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
         saveCloudData();
         switchView('stats', username);
     }
@@ -445,7 +447,6 @@
         let points = 25.00;
 
         try {
-            // Using a resilient CORS proxy to hit GDDL API securely without getting blocked
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://gdladder.com/api/level/${levelId}`)}`;
             const res = await fetch(proxyUrl);
             if (res.ok) {
