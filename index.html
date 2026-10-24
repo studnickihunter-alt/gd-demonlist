@@ -319,22 +319,18 @@
         }
     }
 
-    function handleCardMouseEnter(lvl, mediaSrc, isVideo) {
-        if (!isVideo) {
-            setDynamicBackground(mediaSrc);
-        }
+    function handleCardMouseEnter(url) {
+        setDynamicBackground(url);
     }
 
     function handleCardMouseLeave() {
         clearDynamicBackground();
     }
 
-    function handleCardClick(mediaSrc, isVideo, event) {
+    function handleCardClick(url, event) {
         event.stopPropagation();
-        if (!isVideo) {
-            lockedBackgroundUrl = mediaSrc;
-            setDynamicBackground(mediaSrc);
-        }
+        lockedBackgroundUrl = url;
+        setDynamicBackground(url);
     }
 
     function checkBackgroundReset(event) {
@@ -346,19 +342,23 @@
         }
     }
 
+    // ADD YOUR 3 LEVEL IDs HERE (e.g. ["10565740", "12345678", "87654321"])
+    const UPLOADED_VIDEO_IDS = ["10565740"]; 
+
     function getLevelMedia(lvl) {
         const strId = String(lvl.id);
-        // Check if an uploaded MP4 video file exists for this level ID
-        // (Assumes you uploaded files named like "10565740.mp4" in your root repository)
         const isSpecial = SPECIAL_LEVELS.some(s => String(s.id) === strId);
-        if (!isSpecial && /^\d+$/.test(strId)) {
-            return { src: `${strId}.mp4`, isVideo: true };
+        const thumbUrl = isSpecial ? SPECIAL_LEVELS.find(s => String(s.id) === strId).thumb : `https://levelthumbs.prevter.me/thumbnail/${strId}`;
+
+        if (!isSpecial && UPLOADED_VIDEO_IDS.includes(strId)) {
+            return { 
+                src: `https://github.com/studnickihunter-alt/gd-demonlist/releases/download/v1.0/${strId}.mp4`, 
+                thumb: thumbUrl, 
+                isVideo: true 
+            };
         }
         
-        // Otherwise fallback to thumbnail image
-        const sp = SPECIAL_LEVELS.find(s => String(s.id) === strId);
-        if (sp) return { src: sp.thumb, isVideo: false };
-        return { src: `https://levelthumbs.prevter.me/thumbnail/${strId}`, isVideo: false };
+        return { src: thumbUrl, thumb: thumbUrl, isVideo: false };
     }
 
     async function loadCloudData() {
@@ -705,8 +705,8 @@
         const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon', true);
 
         const mediaHtml = media.isVideo 
-            ? `<video class="modal-hero" src="${media.src}" autoplay muted loop playsinline></video>`
-            : `<img src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+            ? `<video class="modal-hero" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {src: '${media.thumb}'}));"></video>`
+            : `<img src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
         document.getElementById('levelModalContent').innerHTML = `
             <div class="modal-hero" id="modalHeroContainer">
@@ -820,14 +820,14 @@
             const beaten = isBeatenByActiveUser(lvl.id);
 
             const mediaEl = media.isVideo
-                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline></video>`
-                : `<img class="level-thumb" src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
+                : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${media.src}', ${media.isVideo})" 
+                         onmouseenter="handleCardMouseEnter('${media.thumb}')" 
                          onmouseleave="handleCardMouseLeave()" 
-                         onclick="handleCardClick('${media.src}', ${media.isVideo}, event); openLevelModal('${lvl.id}')">
+                         onclick="handleCardClick('${media.thumb}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
@@ -903,14 +903,14 @@
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             const mediaEl = media.isVideo
-                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline></video>`
-                : `<img class="level-thumb" src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
+                : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${media.src}', ${media.isVideo})" 
+                         onmouseenter="handleCardMouseEnter('${media.thumb}')" 
                          onmouseleave="handleCardMouseLeave()" 
-                         onclick="handleCardClick('${media.src}', ${media.isVideo}, event); openLevelModal('${lvl.id}')">
+                         onclick="handleCardClick('${media.thumb}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
@@ -962,14 +962,14 @@
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             const mediaEl = media.isVideo
-                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline></video>`
-                : `<img class="level-thumb" src="${media.src}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
+                ? `<video class="level-video" src="${media.src}" autoplay muted loop playsinline onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>`
+                : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter(${JSON.stringify(lvl).replace(/"/g, '&quot;')}, '${media.src}', ${media.isVideo})" 
+                         onmouseenter="handleCardMouseEnter('${media.thumb}')" 
                          onmouseleave="handleCardMouseLeave()" 
-                         onclick="handleCardClick('${media.src}', ${media.isVideo}, event); openLevelModal('${lvl.id}')">
+                         onclick="handleCardClick('${media.thumb}', event); openLevelModal('${lvl.id}')">
                     <div class="level-thumb-wrapper">
                         ${mediaEl}
                         ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
