@@ -72,6 +72,21 @@
         .tab-btn:hover { color: #fff; }
         .tab-btn.active { color: #fff; border-bottom-color: #4dabf7; }
 
+        /* Filter Dropdown in Header */
+        .filter-dropdown-wrapper { position: relative; display: inline-block; }
+        .filter-dropdown-btn {
+            background: #343a40; color: #fff; border: 1px solid var(--border);
+            padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: 700; cursor: pointer;
+        }
+        .filter-dropdown-btn:hover { background: #495057; }
+        .filter-dropdown-content {
+            display: none; position: absolute; right: 0; background-color: var(--bg-card);
+            min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 200;
+            border: 1px solid var(--border); border-radius: 4px; padding: 8px;
+        }
+        .filter-dropdown-content.show { display: block; }
+        .filter-checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; padding: 4px 0; color: var(--text-main); cursor: pointer; }
+
         select, input, button {
             padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border);
             background-color: var(--bg-card); color: var(--text-main); font-size: 0.85rem; font-weight: 600;
@@ -128,9 +143,23 @@
             box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
         }
 
-        /* Fixed container width/height matching video sizing across mobile & desktop */
-        .level-thumb-wrapper { width: 100%; height: 200px; position: relative; background-color: #000; overflow: hidden; flex-shrink: 0; }
-        @media (min-width: 650px) { .level-thumb-wrapper { width: 250px; min-width: 250px; height: 140px; } }
+        /* Enforce exact 16:9 responsive aspect ratio container to match native video sizing perfectly across mobile and desktop */
+        .level-thumb-wrapper {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            position: relative;
+            background-color: #000;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        @media (min-width: 650px) {
+            .level-thumb-wrapper {
+                width: 250px;
+                min-width: 250px;
+                height: 140px;
+                aspect-ratio: auto;
+            }
+        }
         .level-thumb, .level-video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 
         .check-overlay {
@@ -220,7 +249,17 @@
 <body id="pageBody" onmousemove="checkBackgroundReset(event)">
 
 <header>
-    <div class="brand">STUDMERLIST <span>CLOUD VIEWER</span></div>
+    <div class="brand" style="display: flex; align-items: center; gap: 15px;">
+        <span>STUDMERLIST</span>
+        <!-- Player Filter Dropdown next to Main List title context -->
+        <div class="filter-dropdown-wrapper">
+            <button class="filter-dropdown-btn" onclick="toggleFilterDropdown(event)">Filter Victors ▼</button>
+            <div id="filterDropdownContent" class="filter-dropdown-content" onclick="event.stopPropagation()">
+                <div style="font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">Show if completed by:</div>
+                <div id="playerCheckboxesContainer"></div>
+            </div>
+        </div>
+    </div>
     <div class="nav-tabs">
         <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main List</button>
         <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Profiles</button>
@@ -288,6 +327,7 @@
         theme: 'light',
         currentView: 'main',
         viewingPlayer: null,
+        selectedFilterPlayers: [], // Stores players selected in the filter dropdown
         levels: [],
         players: {}
     };
@@ -302,6 +342,51 @@
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
     let currentlyActiveAudioVidId = null;
+
+    function toggleFilterDropdown(event) {
+        event.stopPropagation();
+        document.getElementById('filterDropdownContent').classList.toggle('show');
+    }
+
+    // Close dropdown when clicking outside
+    window.onclick = function(event) {
+        if (!event.target.matches('.filter-dropdown-btn') && !event.target.closest('.filter-dropdown-content')) {
+            const dropdown = document.getElementById('filterDropdownContent');
+            if (dropdown && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
+        }
+    }
+
+    function handleFilterPlayerToggle(playerName, isChecked) {
+        if (isChecked) {
+            if (!appState.selectedFilterPlayers.includes(playerName)) {
+                appState.selectedFilterPlayers.push(playerName);
+            }
+        } else {
+            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
+        }
+        renderMainList();
+    }
+
+    function renderFilterCheckboxes() {
+        const container = document.getElementById('playerCheckboxesContainer');
+        const allPlayers = Object.keys(appState.players);
+        if (allPlayers.length === 0) {
+            container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No players found</div>`;
+            return;
+        }
+
+        container.innerHTML = allPlayers.map(p => {
+            const isChecked = appState.selectedFilterPlayers.includes(p);
+            return `
+                <label class="filter-checkbox-item">
+                    <input type="checkbox" value="${escapeHtml(p)}" ${isChecked ? 'checked' : ''} onchange="handleFilterPlayerToggle('${escapeHtml(p)}', this.checked)">
+                    ${escapeHtml(p)}
+                </label>
+            `;
+        }).join('');
+    }
 
     function setDynamicBackground(url) {
         document.body.style.backgroundImage = `url('${url}')`;
@@ -319,14 +404,14 @@
         setDynamicBackground(url);
         
         if (currentlyActiveAudioVidId && currentlyActiveAudioVidId !== vidId) {
-            const prevVid = document.getElementById(`vid-${currentlyActiveAudioVidId}`);
+            const prevVid = document.getElementById(`vid-${currentlyActiveAudioVidId}`) || document.getElementById(`profile-vid-${currentlyActiveAudioVidId}`) || document.getElementById(`account-vid-${currentlyActiveAudioVidId}`);
             if (prevVid) prevVid.muted = true;
         }
 
         currentlyActiveAudioVidId = vidId;
-        const vid = document.getElementById(`vid-${vidId}`);
+        const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
         if (vid) {
-            vid.muted = false;
+            vid.muted = false; // Play audio out loud on hover
         }
     }
 
@@ -335,15 +420,16 @@
         if (currentlyActiveAudioVidId === vidId) {
             currentlyActiveAudioVidId = null;
         }
-        const vid = document.getElementById(`vid-${vidId}`);
+        const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
         if (vid) {
             vid.muted = true;
         }
     }
 
+    // Fully restarts both video and audio from 0 seconds on click/tap
     function restartVideo(vidId, event) {
         event.stopPropagation();
-        const vid = document.getElementById(`vid-${vidId}`);
+        const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
         if (vid) {
             vid.currentTime = 0;
             vid.play().catch(e => {});
@@ -394,6 +480,7 @@
         
         if (!appState.players) appState.players = {};
         if (!appState.levels) appState.levels = [];
+        if (!appState.selectedFilterPlayers) appState.selectedFilterPlayers = [];
 
         SPECIAL_LEVELS.forEach(sp => {
             if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
@@ -712,6 +799,7 @@
     function renderAll() {
         renderAuthPanel();
         renderLeaderboard();
+        renderFilterCheckboxes();
         renderMainList();
         renderPlayerStats();
         renderAccountPersonalList();
@@ -771,10 +859,19 @@
 
     function renderMainList() {
         const container = document.getElementById('mainLevelsList');
-        const list = appState.levels;
+        let list = appState.levels;
+
+        // Apply player selection filter dropdown if any players are checked
+        if (appState.selectedFilterPlayers && appState.selectedFilterPlayers.length > 0) {
+            list = list.filter(lvl => {
+                const victors = getVictorsForLevel(lvl.id);
+                // Level is included only if ALL selected filter players have completed it
+                return appState.selectedFilterPlayers.every(fp => victors.includes(fp));
+            });
+        }
 
         if (list.length === 0) {
-            container.innerHTML = `<div class="empty-state"><h3>No Levels on Main List</h3><p style="margin-top:6px;">Complete a level to feature it here automatically.</p></div>`;
+            container.innerHTML = `<div class="empty-state"><h3>No Levels Match Filter</h3><p style="margin-top:6px;">Try selecting different players or clear the filter.</p></div>`;
             return;
         }
 
@@ -881,7 +978,7 @@
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             const mediaEl = media.isVideo
-                ? `<video id="vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
+                ? `<video id="profile-vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
                    <button class="restart-btn" onclick="restartVideo('${lvl.id}', event)" title="Restart Video"><img src="restart.png" alt="Restart" onerror="this.replaceWith('↺')"></button>`
                 : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
@@ -949,7 +1046,7 @@
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
             const mediaEl = media.isVideo
-                ? `<video id="vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
+                ? `<video id="account-vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
                    <button class="restart-btn" onclick="restartVideo('${lvl.id}', event)" title="Restart Video"><img src="restart.png" alt="Restart" onerror="this.replaceWith('↺')"></button>`
                 : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
 
