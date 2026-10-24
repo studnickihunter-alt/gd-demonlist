@@ -306,7 +306,7 @@
         { id: "deadlocked", name: "Deadlocked", creator: "RobTop", difficulty: "Easy Demon", points: 4.67, thumb: "deadlocked.png" },
         { id: "toe2", name: "Theory of Everything 2", creator: "RobTop", difficulty: "Easy Demon", points: 3.05, thumb: "toe2.png" },
         { id: "clubstep", name: "Clubstep", creator: "RobTop", difficulty: "Easy Demon", points: 2.83, thumb: "clubstep.png" },
-        { id: "cantletgo", name: "Can't Let Go", creator: "RobTop", difficulty: "Impossible, Nobody has ever done it before", points: 0.00, thumb: "cantletgo.png" }
+        { id: "cantletgo", name: "Can't Let Go", creator: "RobTop", difficulty: "it's impossible, nobodies ever done it before!", points: 0.00, thumb: "cantletgo.png" }
     ];
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
@@ -785,7 +785,7 @@
                 <div class="modal-footer">
                     ${activeSessionPlayer ? `
                         <button class="${isBeatenByMe ? 'btn-danger' : ''}" onclick="toggleVictor('${lvl.id}')">
-                            ${isBeatenByMe ? 'Remove Completion' : '+ Mark Completed For Myself'}
+                            ${isBeatenByMe ? 'Remove Completion' : '+ Complete'}
                         </button>
                     ` : `<span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Log into account tab to modify victors</span>`}
                     <button class="btn-secondary" onclick="closeLevelModal()">Close</button>
