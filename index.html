@@ -33,7 +33,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-main); transition: background-color 0.2s, color 0.2s; }
+        body { background-color: var(--bg-body); color: var(--text-main); }
 
         header {
             background-color: var(--bg-header);
@@ -53,13 +53,13 @@
         .brand span { color: #4dabf7; font-weight: 400; font-size: 0.8rem; display: none; }
         @media(min-width: 600px) { .brand span { display: inline; } }
 
-        .nav-tabs { display: flex; gap: 6px; align-items: center; }
+        .nav-tabs { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
         .tab-btn {
             background: transparent; color: #adb5bd; border: none; padding: 6px 10px;
-            font-weight: 700; font-size: 0.75rem; text-transform: uppercase; cursor: pointer;
+            font-weight: 700; font-size: 0.7rem; text-transform: uppercase; cursor: pointer;
             border-bottom: 3px solid transparent; transition: color 0.15s;
         }
-        @media(min-width: 600px) { .tab-btn { padding: 8px 16px; font-size: 0.85rem; } }
+        @media(min-width: 600px) { .tab-btn { padding: 8px 14px; font-size: 0.8rem; } }
         .tab-btn:hover { color: #fff; }
         .tab-btn.active { color: #fff; border-bottom-color: #4dabf7; }
 
@@ -75,11 +75,8 @@
         .btn-danger:hover { background-color: #bd2130; }
 
         .container {
-            max-width: 1180px; margin: 20px auto; padding: 0 12px;
-            display: grid; grid-template-columns: 1fr; gap: 20px;
-        }
-        @media (min-width: 900px) {
-            .container { grid-template-columns: 1fr 340px; margin: 30px auto; padding: 0 20px; gap: 28px; }
+            max-width: 1000px; margin: 20px auto; padding: 0 12px;
+            display: flex; flex-direction: column; gap: 20px;
         }
 
         .list-container { display: flex; flex-direction: column; gap: 14px; }
@@ -134,8 +131,7 @@
         .badge-points { background-color: rgba(0, 102, 204, 0.12); color: var(--accent); }
         .badge-mainrank { background-color: rgba(108, 117, 125, 0.15); color: var(--text-muted); }
 
-        .sidebar { display: flex; flex-direction: column; gap: 16px; }
-        .panel { background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; border: 1px solid var(--border); }
+        .panel { background-color: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
         @media(min-width: 650px) { .panel { padding: 20px; } }
         .panel h2 { font-size: 0.95rem; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
 
@@ -145,19 +141,21 @@
         .form-row input { flex: 1; width: 100%; }
 
         .status-box { font-size: 0.78rem; padding: 8px; border-radius: 4px; margin-top: 6px; display: none; font-weight: 600; }
-        .status-loading { display: block; background-color: rgba(77, 171, 247, 0.15); color: var(--accent); }
         .status-error { display: block; background-color: rgba(220, 53, 69, 0.15); color: var(--danger); }
         .status-success { display: block; background-color: rgba(43, 138, 62, 0.15); color: var(--success); }
 
         .auth-bar { background-color: var(--bg-body); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
 
+        .leaderboard-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px;
+        }
         .leaderboard-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 10px; border-bottom: 1px solid var(--border); border-radius: 4px; gap: 6px;
+            padding: 10px 12px; background-color: var(--bg-body); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; gap: 6px;
         }
-        .leaderboard-item:hover { background-color: rgba(0, 102, 204, 0.08); }
-        .leaderboard-item.active { background-color: rgba(0, 102, 204, 0.15); border-left: 3px solid var(--accent); }
-        .lb-info { display: flex; justify-content: space-between; align-items: center; flex-grow: 1; cursor: pointer; }
+        .leaderboard-item:hover { border-color: var(--accent); }
+        .leaderboard-item.active { border-color: var(--accent); background-color: rgba(0, 102, 204, 0.08); }
+        .lb-info { display: flex; justify-content: space-between; align-items: center; flex-grow: 1; }
         .lb-rank-name { font-weight: 700; font-size: 0.85rem; }
         .lb-pts { font-size: 0.78rem; font-weight: 800; color: var(--accent); }
 
@@ -189,55 +187,61 @@
     <div class="nav-tabs">
         <button id="tabMain" class="tab-btn active" onclick="switchView('main')">Main List</button>
         <button id="tabStats" class="tab-btn" onclick="switchView('stats')">Profiles</button>
-        <button class="btn-secondary" style="margin-left: 6px; padding: 6px 10px;" onclick="toggleTheme()">Theme</button>
+        <button id="tabAccount" class="tab-btn" onclick="switchView('account')">Account</button>
     </div>
 </header>
 
 <div class="container">
-    <main class="list-container">
-        <!-- VIEW 1: MAIN DEMONLIST -->
-        <div id="mainListView" class="list-container">
-            <div class="list-banner"><div><h1>Official Custom Demonlist</h1></div></div>
-            <div id="mainLevelsList" class="list-container"></div>
-        </div>
+    <!-- VIEW 1: MAIN DEMONLIST -->
+    <div id="mainListView" class="list-container">
+        <div class="list-banner"><div><h1>Official Custom Demonlist</h1></div></div>
+        <div id="mainLevelsList" class="list-container"></div>
+    </div>
 
-        <!-- VIEW 2: PLAYER STATS -->
-        <div id="playerStatsView" class="list-container hidden">
-            <div class="list-banner">
-                <div>
-                    <h1 id="playerProfileTitle">Player Name</h1>
-                    <p id="playerProfileStats">0.00 Points • 0 Levels Completed</p>
-                </div>
+    <!-- VIEW 2: PROFILES TAB -->
+    <div id="profilesTabView" class="list-container hidden">
+        <div class="panel">
+            <h2>Player Profiles & Rankings</h2>
+            <div id="leaderboardContainer" class="leaderboard-grid"></div>
+        </div>
+        <div class="list-banner">
+            <div>
+                <h1 id="playerProfileTitle">Player Name</h1>
+                <p id="playerProfileStats">0.00 Points • 0 Levels Completed</p>
             </div>
-            <div id="playerPersonalList" class="list-container"></div>
         </div>
-    </main>
+        <div id="playerPersonalList" class="list-container"></div>
+    </div>
 
-    <!-- RIGHT SIDEBAR -->
-    <aside class="sidebar">
-        <!-- Built-in Authentication Panel -->
+    <!-- VIEW 3: ACCOUNT TAB -->
+    <div id="accountTabView" class="list-container hidden">
         <div class="panel">
             <h2>Account Session</h2>
             <div id="authStatusContainer"></div>
         </div>
 
-        <!-- Player Leaderboard Panel -->
-        <div class="panel">
-            <h2>Player Profiles</h2>
-            <div id="leaderboardContainer"></div>
-        </div>
-
-        <!-- Add Beaten Level Panel -->
         <div class="panel">
             <h2>Add Beaten Level</h2>
             <div class="form-group">
                 <label for="levelIdsInput">Level ID</label>
                 <input type="text" id="levelIdsInput" placeholder="e.g. 10565740">
             </div>
+            <div class="form-group">
+                <label for="levelTierInput">Level Tier (Optional, must be format like 7.26)</label>
+                <input type="text" id="levelTierInput" placeholder="e.g. 23.98">
+            </div>
             <button style="width: 100%;" onclick="fetchAndAddLevel()" id="addBtn">Submit Completion</button>
             <div id="statusBox" class="status-box"></div>
         </div>
-    </aside>
+
+        <div class="list-banner" style="border-left-color: #2b8a3e;">
+            <div>
+                <h1 style="font-size: 1.2rem;" id="accountPersonalTitle">Your Completed Levels</h1>
+                <p>Strictly ranked hardest to easiest</p>
+            </div>
+        </div>
+        <div id="accountPersonalList" class="list-container"></div>
+    </div>
 </div>
 
 <!-- Modal -->
@@ -253,13 +257,13 @@
         theme: 'light',
         currentView: 'main',
         viewingPlayer: null,
-        activePlayer: null,
         activeModalLevelId: null,
         levels: [],
         players: {}
     };
 
-    const DIFF_WEIGHTS = { 'Extreme Demon': 25.00, 'Insane Demon': 17.00, 'Hard Demon': 12.00, 'Medium Demon': 7.00, 'Easy Demon': 2.00 };
+    // ACTIVE SESSION TOKEN IS SESSION-BASED (CLEARS ON PAGE RELOAD)
+    let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
 
     async function loadCloudData() {
         try {
@@ -307,22 +311,15 @@
         }
     }
 
-    function toggleTheme() {
-        appState.theme = appState.theme === 'dark' ? 'light' : 'dark';
-        saveCloudData();
-    }
-
-    function switchView(viewName, playerName = null) {
+    function switchView(viewName) {
         appState.currentView = viewName;
-        if (playerName && appState.players[playerName]) {
-            appState.viewingPlayer = playerName;
-        } else if (!appState.viewingPlayer && Object.keys(appState.players).length > 0) {
-            appState.viewingPlayer = Object.keys(appState.players)[0];
-        }
         document.getElementById('tabMain').classList.toggle('active', viewName === 'main');
         document.getElementById('tabStats').classList.toggle('active', viewName === 'stats');
+        document.getElementById('tabAccount').classList.toggle('active', viewName === 'account');
+
         document.getElementById('mainListView').classList.toggle('hidden', viewName !== 'main');
-        document.getElementById('playerStatsView').classList.toggle('hidden', viewName !== 'stats');
+        document.getElementById('profilesTabView').classList.toggle('hidden', viewName !== 'stats');
+        document.getElementById('accountTabView').classList.toggle('hidden', viewName !== 'account');
         renderAll();
     }
 
@@ -345,13 +342,14 @@
         }
 
         appState.players[username] = { password: password, completions: [] };
-        appState.activePlayer = username;
+        activeSessionPlayer = username;
+        sessionStorage.setItem('active_session_player', username);
         appState.viewingPlayer = username;
         msgBox.style.display = 'none';
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
         saveCloudData();
-        switchView('stats', username);
+        switchView('account');
     }
 
     function handleLoginSubmit() {
@@ -372,22 +370,24 @@
             return;
         }
 
-        appState.activePlayer = username;
+        activeSessionPlayer = username;
+        sessionStorage.setItem('active_session_player', username);
         appState.viewingPlayer = username;
         msgBox.style.display = 'none';
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
         saveCloudData();
-        switchView('stats', username);
+        switchView('account');
     }
 
     function handleLogout() {
-        appState.activePlayer = null;
+        activeSessionPlayer = null;
+        sessionStorage.removeItem('active_session_player');
         saveCloudData();
     }
 
     function adminDeleteAccount(targetName) {
-        if (appState.activePlayer !== 'HunterAdmin') {
+        if (activeSessionPlayer !== 'HunterAdmin') {
             alert("Only HunterAdmin can delete accounts!");
             return;
         }
@@ -415,7 +415,7 @@
 
     function getLevelPoints(level) {
         if (level.points !== null && level.points !== undefined && !isNaN(level.points)) return Number(level.points);
-        return DIFF_WEIGHTS[level.difficulty] ?? 25.00;
+        return 0.00;
     }
 
     function getPlayerPoints(playerName) {
@@ -440,61 +440,53 @@
         appState.levels.sort((a, b) => getLevelPoints(b) - getLevelPoints(a));
     }
 
-    async function fetchSingleLevelData(levelId) {
+    async function fetchBasicLevelData(levelId) {
         let name = `Level ${levelId}`;
         let creator = "Unknown";
         let difficulty = "Extreme Demon";
-        let points = 25.00;
 
         try {
-            // Using the correct plural /api/levels/ endpoint path
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://gdladder.com/api/levels/${levelId}`)}`;
-            const res = await fetch(proxyUrl);
-            if (res.ok) {
-                const data = await res.json();
-                const rawRating = data.rating ?? data.Rating ?? data.Tier ?? data.tier ?? data.score ?? data.Score ?? data.ratingValue;
-                if (rawRating !== undefined && rawRating !== null && !isNaN(rawRating)) {
-                    points = parseFloat(Number(rawRating).toFixed(2));
-                }
-                const meta = data.Meta || data.meta || data;
-                if (meta) {
-                    name = meta.Name || meta.name || name;
-                    creator = meta.Publisher?.name || meta.creator || meta.author || creator;
-                    if (meta.Difficulty || meta.difficulty) difficulty = meta.Difficulty || meta.difficulty;
+            const gdbRes = await fetch(`https://gdbrowser.com/api/level/${levelId}`);
+            if (gdbRes.ok) {
+                const gdbData = await gdbRes.json();
+                if (gdbData && gdbData.name) {
+                    name = gdbData.name;
+                    creator = gdbData.author || creator;
+                    difficulty = gdbData.difficulty || difficulty;
                 }
             }
-        } catch (e) {
-            console.warn("GDDL proxy fetch fallback triggered", e);
-        }
+        } catch (e) {}
 
-        if (name === `Level ${levelId}` || creator === "Unknown") {
-            try {
-                const gdbRes = await fetch(`https://gdbrowser.com/api/level/${levelId}`);
-                if (gdbRes.ok) {
-                    const gdbData = await gdbRes.json();
-                    if (gdbData && gdbData.name) {
-                        name = gdbData.name;
-                        creator = gdbData.author || creator;
-                        difficulty = gdbData.difficulty || difficulty;
-                    }
-                }
-            } catch (e) {}
-        }
-
-        return { id: String(levelId), name, creator, difficulty, points };
+        return { id: String(levelId), name, creator, difficulty };
     }
 
     async function fetchAndAddLevel() {
-        if (!appState.activePlayer) {
+        if (!activeSessionPlayer) {
             alert("You must be logged into an account to submit level completions!");
             return;
         }
 
         const input = document.getElementById('levelIdsInput');
+        const tierInput = document.getElementById('levelTierInput');
         const statusBox = document.getElementById('statusBox');
         const addBtn = document.getElementById('addBtn');
         const id = input.value.replace(/\D/g, '').trim();
+        const tierVal = tierInput.value.trim();
+
         if (!id) return;
+
+        // Validation for exact two decimal points if tier is provided
+        let customPoints = null;
+        if (tierVal !== "") {
+            const regex = /^\d+\.\d{2}$/;
+            if (!regex.test(tierVal)) {
+                statusBox.className = 'status-box status-error';
+                statusBox.textContent = "Invalid tier format! Must have exactly two decimal places (e.g. 7.26).";
+                statusBox.style.display = 'block';
+                return;
+            }
+            customPoints = parseFloat(tierVal);
+        }
 
         addBtn.disabled = true;
         statusBox.className = 'status-box status-loading';
@@ -503,16 +495,26 @@
         try {
             let levelObj = appState.levels.find(l => String(l.id) === String(id));
             if (!levelObj) {
-                levelObj = await fetchSingleLevelData(id);
+                const basicData = await fetchBasicLevelData(id);
+                levelObj = {
+                    id: String(id),
+                    name: basicData.name,
+                    creator: basicData.creator,
+                    difficulty: basicData.difficulty,
+                    points: customPoints !== null ? customPoints : 0.00
+                };
                 appState.levels.push(levelObj);
+            } else {
+                // If level already exists, ignore new point value per your rule
             }
 
-            const comps = appState.players[appState.activePlayer].completions;
+            const comps = appState.players[activeSessionPlayer].completions;
             if (!comps.includes(String(id))) {
                 comps.push(String(id));
             }
 
             input.value = '';
+            tierInput.value = '';
             statusBox.style.display = 'none';
             await saveCloudData();
         } catch (err) {
@@ -524,23 +526,17 @@
     }
 
     async function toggleVictor(levelId) {
-        if (!appState.activePlayer) {
-            alert("You must be logged into an account to add or remove victor records!");
+        if (!activeSessionPlayer) {
+            alert("You must be logged into an account to modify victor records!");
             return;
         }
-        const comps = appState.players[appState.activePlayer].completions;
+        const comps = appState.players[activeSessionPlayer].completions;
         const strId = String(levelId);
         const idx = comps.indexOf(strId);
 
         if (idx > -1) {
-            const pwd = prompt(`Enter password for "${appState.activePlayer}" to remove your victor record:`);
-            if (pwd === null) return;
-            if (appState.players[appState.activePlayer].password === pwd) {
-                comps.splice(idx, 1);
-            } else {
-                alert("Incorrect password! Cannot remove victor status.");
-                return;
-            }
+            // Already signed in, so no prompt needed to remove self
+            comps.splice(idx, 1);
         } else {
             comps.push(strId);
         }
@@ -569,7 +565,7 @@
         const pts = getLevelPoints(lvl);
         const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
         const victors = getVictorsForLevel(lvl.id);
-        const isBeatenByMe = appState.activePlayer && appState.players[appState.activePlayer].completions.includes(String(lvl.id));
+        const isBeatenByMe = activeSessionPlayer && appState.players[activeSessionPlayer].completions.includes(String(lvl.id));
 
         document.getElementById('levelModalContent').innerHTML = `
             <div class="modal-hero">
@@ -589,15 +585,15 @@
                 <div style="margin-bottom: 14px;">
                     <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Victors:</span>
                     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-                        ${victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="closeLevelModal(); switchView('stats', '${escapeHtml(v)}')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.8rem; font-style:italic;">None</span>'}
+                        ${victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="closeLevelModal(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.8rem; font-style:italic;">None</span>'}
                     </div>
                 </div>
                 <div class="modal-footer">
-                    ${appState.activePlayer ? `
+                    ${activeSessionPlayer ? `
                         <button class="${isBeatenByMe ? 'btn-danger' : ''}" onclick="toggleVictor('${lvl.id}')">
-                            ${isBeatenByMe ? 'Remove Me as Victor (Password Required)' : '+ Mark Completed For Myself'}
+                            ${isBeatenByMe ? 'Remove Me as Victor' : '+ Mark Completed For Myself'}
                         </button>
-                    ` : `<span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Log in via sidebar to modify victors</span>`}
+                    ` : `<span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Log into account tab to modify victors</span>`}
                     <button class="btn-secondary" onclick="closeLevelModal()">Close</button>
                 </div>
             </div>
@@ -609,14 +605,15 @@
         renderLeaderboard();
         renderMainList();
         renderPlayerStats();
+        renderAccountPersonalList();
     }
 
     function renderAuthPanel() {
         const container = document.getElementById('authStatusContainer');
-        if (appState.activePlayer) {
+        if (activeSessionPlayer) {
             container.innerHTML = `
                 <div class="auth-bar">
-                    <span>Logged in as: <strong>${escapeHtml(appState.activePlayer)}</strong> ${appState.activePlayer === 'HunterAdmin' ? '(Admin)' : ''}</span>
+                    <span>Logged in as: <strong>${escapeHtml(activeSessionPlayer)}</strong> ${activeSessionPlayer === 'HunterAdmin' ? '(Admin)' : ''}</span>
                     <button class="btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="handleLogout()">Log Out</button>
                 </div>
             `;
@@ -647,17 +644,17 @@
 
         if (playersSorted.length === 0) { container.innerHTML = `<p style="font-size:0.8rem; color:var(--text-muted);">No accounts registered.</p>`; return; }
 
-        const isAdmin = appState.activePlayer === 'HunterAdmin';
+        const isAdmin = activeSessionPlayer === 'HunterAdmin';
 
         container.innerHTML = playersSorted.map((p, idx) => {
             const isSelected = appState.viewingPlayer === p.name;
             return `
-                <div class="leaderboard-item ${isSelected ? 'active' : ''}">
-                    <div class="lb-info" onclick="switchView('stats', '${escapeHtml(p.name)}')">
-                        <span class="lb-rank-name">#${idx + 1} ${escapeHtml(p.name)} ${appState.activePlayer === p.name ? '(You)' : ''}</span>
+                <div class="leaderboard-item ${isSelected ? 'active' : ''}" onclick="appState.viewingPlayer='${escapeHtml(p.name)}'; renderPlayerStats()">
+                    <div class="lb-info">
+                        <span class="lb-rank-name">#${idx + 1} ${escapeHtml(p.name)} ${activeSessionPlayer === p.name ? '(You)' : ''}</span>
                         <span class="lb-pts">${p.pts.toFixed(2)} pts</span>
                     </div>
-                    ${isAdmin && p.name !== 'HunterAdmin' ? `<button class="btn-danger" style="padding: 2px 6px; font-size: 0.65rem;" onclick="adminDeleteAccount('${escapeHtml(p.name)}')">Delete</button>` : ''}
+                    ${isAdmin && p.name !== 'HunterAdmin' ? `<button class="btn-danger" style="padding: 2px 6px; font-size: 0.65rem;" onclick="event.stopPropagation(); adminDeleteAccount('${escapeHtml(p.name)}')">Delete</button>` : ''}
                 </div>
             `;
         }).join('');
@@ -677,7 +674,7 @@
             const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); switchView('stats', '${escapeHtml(v)}')">${escapeHtml(v)}</span>`).join('');
+            const victorsHtml = victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('');
 
             return `
                 <article class="level-card" onclick="openLevelModal('${lvl.id}')">
@@ -706,7 +703,7 @@
         const player = appState.viewingPlayer;
         if (!player || !appState.players[player]) {
             document.getElementById('playerProfileTitle').textContent = "Select a Profile";
-            document.getElementById('playerProfileStats').textContent = "Click any player on the leaderboard to view their progress";
+            document.getElementById('playerProfileStats').textContent = "Click any player on the leaderboard above to view their progress";
             document.getElementById('playerPersonalList').innerHTML = "";
             return;
         }
@@ -725,6 +722,51 @@
         }
 
         personalListEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
+            const personalRank = personalIdx + 1;
+            const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
+            return `
+                <article class="level-card" onclick="openLevelModal('${lvl.id}')">
+                    <div class="level-thumb-wrapper">
+                        <img class="level-thumb" src="${thumbUrl}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
+                    </div>
+                    <div class="level-content">
+                        <div class="level-title-row">
+                            <span class="level-rank">#${personalRank} –</span>
+                            <span class="level-name">${escapeHtml(lvl.name)}</span>
+                            <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
+                        </div>
+                        <div class="level-meta">
+                            <span class="badge badge-diff">${escapeHtml(lvl.difficulty || 'Demon')}</span>
+                            <span class="badge badge-mainrank">Main List #${lvl.mainRank}</span>
+                            <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderAccountPersonalList() {
+        const titleEl = document.getElementById('accountPersonalTitle');
+        const listEl = document.getElementById('accountPersonalList');
+
+        if (!activeSessionPlayer || !appState.players[activeSessionPlayer]) {
+            titleEl.textContent = "Your Completed Levels";
+            listEl.innerHTML = `<div class="empty-state"><h3>Not Logged In</h3><p style="margin-top:6px;">Log into your account above to view your list.</p></div>`;
+            return;
+        }
+
+        titleEl.textContent = `${activeSessionPlayer}'s Completed Levels`;
+        const data = appState.players[activeSessionPlayer];
+        const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
+
+        if (beatenLevels.length === 0) {
+            listEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels Yet</h3><p style="margin-top:6px;">Submit a level completion above to build your personal ranking.</p></div>`;
+            return;
+        }
+
+        listEl.innerHTML = beatenLevels.map((lvl, personalIdx) => {
             const personalRank = personalIdx + 1;
             const thumbUrl = `https://levelthumbs.prevter.me/thumbnail/${lvl.id}`;
             return `
