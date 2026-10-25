@@ -65,7 +65,7 @@
         .nav-tabs-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .nav-tabs { display: flex; gap: 4px; align-items: center; }
         
-        /* Filter Dropdown next to Main List tab */
+        /* Filter Dropdown placed right next to Main List tab */
         .filter-dropdown-wrapper { position: relative; display: inline-block; }
         .filter-dropdown-btn {
             background: #343a40; color: #fff; border: 1px solid var(--border);
@@ -145,7 +145,6 @@
             box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
         }
 
-        /* Slightly shorter video preview height */
         .level-thumb-wrapper {
             width: 100%;
             height: 160px;
@@ -161,7 +160,7 @@
                 height: 120px;
             }
         }
-        .level-thumb, .level-video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+        .level-thumb, .level-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .check-overlay {
             position: absolute; top: 6px; left: 6px; width: 64px; height: 64px;
@@ -172,14 +171,6 @@
             position: absolute; bottom: 6px; left: 6px; background: rgba(0, 0, 0, 0.75);
             color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 6px; border-radius: 3px; z-index: 5;
         }
-
-        .restart-btn {
-            position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.7);
-            border: none; border-radius: 4px; padding: 4px; cursor: pointer; z-index: 15;
-            display: flex; align-items: center; justify-content: center; transition: background 0.15s;
-        }
-        .restart-btn:hover { background: rgba(0, 0, 0, 0.9); }
-        .restart-btn img { width: 20px; height: 20px; display: block; }
 
         .level-content { padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
         @media(min-width: 650px) { .level-content { padding: 14px 20px; } }
@@ -334,7 +325,7 @@
         theme: 'light',
         currentView: 'main',
         viewingPlayer: null,
-        selectedFilterPlayers: null, // null means uninitialized (all start selected)
+        selectedFilterPlayers: null, 
         levels: [],
         players: {}
     };
@@ -348,7 +339,6 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
-    let currentlyActiveAudioVidId = null;
 
     function toggleFilterDropdown(event) {
         event.stopPropagation();
@@ -369,7 +359,6 @@
         if (appState.selectedFilterPlayers === null) {
             appState.selectedFilterPlayers = [...allPlayerNames];
         } else {
-            // Ensure any newly registered accounts are included by default
             allPlayerNames.forEach(name => {
                 if (!appState.selectedFilterPlayers.includes(name)) {
                     appState.selectedFilterPlayers.push(name);
@@ -430,39 +419,37 @@
         }
     }
 
-    function handleCardMouseEnter(url, vidId) {
-        setDynamicBackground(url);
-        
-        if (currentlyActiveAudioVidId && currentlyActiveAudioVidId !== vidId) {
-            const prevVid = document.getElementById(`vid-${currentlyActiveAudioVidId}`) || document.getElementById(`profile-vid-${currentlyActiveAudioVidId}`) || document.getElementById(`account-vid-${currentlyActiveAudioVidId}`);
-            if (prevVid) prevVid.muted = true;
-        }
-
-        currentlyActiveAudioVidId = vidId;
-        const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
-        if (vid) {
-            vid.muted = false; // Play audio out loud on hover
+    // Hover handler: swap image out for playing video with audio from the beginning
+    function handleCardMouseEnter(wrapperEl, media, thumbUrl) {
+        setDynamicBackground(thumbUrl);
+        if (media.isVideo) {
+            wrapperEl.innerHTML = `
+                <video class="level-video" src="${media.src}" autoplay loop playsinline preload="auto"></video>
+            `;
         }
     }
 
-    function handleCardMouseLeave(vidId) {
+    // Mouse leave handler: stop video and swap back to static GDDL thumbnail image
+    function handleCardMouseLeave(wrapperEl, thumbUrl, levelId, beaten) {
         clearDynamicBackground();
-        if (currentlyActiveAudioVidId === vidId) {
-            currentlyActiveAudioVidId = null;
-        }
-        const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
-        if (vid) {
-            vid.muted = true;
-        }
+        const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
+        wrapperEl.innerHTML = `
+            <img class="level-thumb" src="${thumbUrl}" alt="Thumbnail" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+            ${checkHtml}
+            <span class="level-id-badge">ID: ${escapeHtml(levelId)}</span>
+        `;
     }
 
-    // Fully restarts both video and audio from 0 seconds on click/tap for ANY tab/list view
-    function restartVideo(vidId, event) {
+    // Click handler: locks background and plays video with audio from the beginning
+    function handleCardClick(wrapperEl, media, thumbUrl, levelId, beaten, event) {
         event.stopPropagation();
-        const vid = document.getElementById(`vid-${vidId}`) || document.getElementById(`profile-vid-${vidId}`) || document.getElementById(`account-vid-${vidId}`);
-        if (vid) {
-            vid.currentTime = 0;
-            vid.play().catch(e => {});
+        lockedBackgroundUrl = thumbUrl;
+        setDynamicBackground(thumbUrl);
+
+        if (media.isVideo) {
+            wrapperEl.innerHTML = `
+                <video class="level-video" src="${media.src}" autoplay loop playsinline preload="auto"></video>
+            `;
         }
     }
 
@@ -549,9 +536,6 @@
 
     function switchView(viewName) {
         appState.currentView = viewName;
-        document.querySelectorAll('.level-video').forEach(v => v.muted = true);
-        currentlyActiveAudioVidId = null;
-
         document.getElementById('tabMain').classList.toggle('active', viewName === 'main');
         document.getElementById('tabStats').classList.toggle('active', viewName === 'stats');
         document.getElementById('tabAccount').classList.toggle('active', viewName === 'account');
@@ -894,13 +878,10 @@
 
         initFilterPlayersIfNeeded();
 
-        // New filter logic: A level appears if at least ONE of the selected filter accounts has completed it.
-        // It only vanishes if all of its victors are unselected (or if it has no victors and filters are active).
         if (appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
-                if (victors.length === 0) return false; // If level has no victors, it's hidden under custom filters
-                // Check if at least one victor is in the selected filter array
+                if (victors.length === 0) return false;
                 return victors.some(v => appState.selectedFilterPlayers.includes(v));
             });
         }
@@ -920,24 +901,16 @@
             const rankClass = getRankBgClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
 
-            const mediaEl = media.isVideo
-                ? `<video id="vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
-                   <button class="restart-btn" onclick="restartVideo('${lvl.id}', event)" title="Restart Video"><img src="restart.png" alt="Restart" onerror="this.replaceWith('↺')"></button>`
-                : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
-
-            const actionBtnHtml = activeSessionPlayer ? `
-                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">
-                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
-                </button>
-            ` : '';
+            const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
 
             return `
-                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter('${media.thumb}', '${lvl.id}')" 
-                         onmouseleave="handleCardMouseLeave('${lvl.id}')">
-                    <div class="level-thumb-wrapper">
-                        ${mediaEl}
-                        ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}">
+                    <div class="level-thumb-wrapper"
+                         onmouseenter="handleCardMouseEnter(this, ${JSON.stringify(media).replace(/"/g, '&quot;')}, '${media.thumb}')"
+                         onmouseleave="handleCardMouseLeave(this, '${media.thumb}', '${lvl.id}', ${beaten})"
+                         onclick="handleCardClick(this, ${JSON.stringify(media).replace(/"/g, '&quot;')}, '${media.thumb}', '${lvl.id}', ${beaten}, event)">
+                        <img class="level-thumb" src="${media.thumb}" alt="Thumbnail" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${checkHtml}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
                     <div class="level-content">
@@ -952,7 +925,7 @@
                                 <span class="badge badge-diff">${diffBadgeHtml}</span>
                                 <span class="badge badge-points">${pts.toFixed(2)} pts</span>
                             </div>
-                            ${actionBtnHtml}
+                            ${activeSessionPlayer ? `<button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">${beaten ? '- Remove Completion' : '+ Mark Complete'}</button>` : ''}
                         </div>
                     </div>
                 </article>
@@ -1012,24 +985,16 @@
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
-            const mediaEl = media.isVideo
-                ? `<video id="profile-vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
-                   <button class="restart-btn" onclick="restartVideo('${lvl.id}', event)" title="Restart Video"><img src="restart.png" alt="Restart" onerror="this.replaceWith('↺')"></button>`
-                : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
-
-            const actionBtnHtml = activeSessionPlayer ? `
-                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">
-                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
-                </button>
-            ` : '';
+            const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
 
             return `
-                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter('${media.thumb}', '${lvl.id}')" 
-                         onmouseleave="handleCardMouseLeave('${lvl.id}')">
-                    <div class="level-thumb-wrapper">
-                        ${mediaEl}
-                        ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}">
+                    <div class="level-thumb-wrapper"
+                         onmouseenter="handleCardMouseEnter(this, ${JSON.stringify(media).replace(/"/g, '&quot;')}, '${media.thumb}')"
+                         onmouseleave="handleCardMouseLeave(this, '${media.thumb}', '${lvl.id}', ${beaten})"
+                         onclick="handleCardClick(this, ${JSON.stringify(media).replace(/"/g, '&quot;')}, '${media.thumb}', '${lvl.id}', ${beaten}, event)">
+                        <img class="level-thumb" src="${media.thumb}" alt="Thumbnail" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${checkHtml}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
                     <div class="level-content">
@@ -1044,7 +1009,7 @@
                                 <span class="badge badge-diff">${diffBadgeHtml}</span>
                                 <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                             </div>
-                            ${actionBtnHtml}
+                            ${activeSessionPlayer ? `<button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">${beaten ? '- Remove Completion' : '+ Mark Complete'}</button>` : ''}
                         </div>
                     </div>
                 </article>
@@ -1080,24 +1045,16 @@
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
 
-            const mediaEl = media.isVideo
-                ? `<video id="account-vid-${lvl.id}" class="level-video" src="${media.src}" autoplay muted loop playsinline preload="auto" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('img'), {className: 'level-thumb', src: '${media.thumb}'}));"></video>
-                   <button class="restart-btn" onclick="restartVideo('${lvl.id}', event)" title="Restart Video"><img src="restart.png" alt="Restart" onerror="this.replaceWith('↺')"></button>`
-                : `<img class="level-thumb" src="${media.thumb}" alt="${escapeHtml(lvl.name)}" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">`;
-
-            const actionBtnHtml = activeSessionPlayer ? `
-                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">
-                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
-                </button>
-            ` : '';
+            const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
 
             return `
-                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}" 
-                         onmouseenter="handleCardMouseEnter('${media.thumb}', '${lvl.id}')" 
-                         onmouseleave="handleCardMouseLeave('${lvl.id}')">
-                    <div class="level-thumb-wrapper">
-                        ${mediaEl}
-                        ${beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : ''}
+                <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}">
+                    <div class="level-thumb-wrapper"
+                         onmouseenter="handleCardMouseEnter(this, ${JSON.stringify(media).replace(/"/g, '&quot;')}, '${media.thumb}')"
+                         onmouseleave="handleCardMouseLeave(this, '${media.thumb}', '${lvl.id}', ${beaten})"
+                         onclick="handleCardClick(this, ${JSON.stringify(media).replace(/"/g, '&quot;')}, '${media.thumb}', '${lvl.id}', ${beaten}, event)">
+                        <img class="level-thumb" src="${media.thumb}" alt="Thumbnail" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/GDColon/GDBrowser/master/assets/level.png';">
+                        ${checkHtml}
                         <span class="level-id-badge">ID: ${escapeHtml(lvl.id)}</span>
                     </div>
                     <div class="level-content">
@@ -1112,7 +1069,7 @@
                                 <span class="badge badge-diff">${diffBadgeHtml}</span>
                                 <span class="badge badge-points">+${lvl.pts.toFixed(2)} pts</span>
                             </div>
-                            ${actionBtnHtml}
+                            ${activeSessionPlayer ? `<button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">${beaten ? '- Remove Completion' : '+ Mark Complete'}</button>` : ''}
                         </div>
                     </div>
                 </article>
