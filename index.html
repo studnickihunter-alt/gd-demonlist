@@ -114,7 +114,8 @@
             background-image: url('greybox.png'); background-size: contain; background-repeat: no-repeat; background-position: center;
             display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .filter-checkbox-item.checked .custom-checkbox {
+        .filter-checkbox-item input[type="checkbox"] { display: none; }
+        .filter-checkbox-item input[type="checkbox"]:checked + .custom-checkbox {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
             background-repeat: no-repeat, no-repeat;
@@ -414,7 +415,7 @@
         currentView: 'main',
         viewingPlayer: null,
         selectedFilterPlayers: null, 
-        hideMyCompletions: false, // Starts false so completions are shown by default
+        hideMyCompletions: false,
         levels: [],
         players: {}
     };
@@ -456,26 +457,22 @@
         }
     }
 
-    function handleFilterPlayerToggle(playerName) {
+    function handleFilterPlayerToggle(playerName, isChecked) {
         if (!appState._userManuallyUnchecked) {
             appState._userManuallyUnchecked = new Set();
         }
         
         initFilterPlayersIfNeeded();
 
-        const isCurrentlyChecked = appState.selectedFilterPlayers.includes(playerName);
-
-        if (isCurrentlyChecked) {
-            appState._userManuallyUnchecked.add(playerName);
-            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
-        } else {
+        if (isChecked) {
             appState._userManuallyUnchecked.delete(playerName);
             if (!appState.selectedFilterPlayers.includes(playerName)) {
                 appState.selectedFilterPlayers.push(playerName);
             }
+        } else {
+            appState._userManuallyUnchecked.add(playerName);
+            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
         }
-
-        renderFilterCheckboxes();
         renderCurrentActiveList();
     }
 
@@ -500,10 +497,11 @@
         container.innerHTML = allPlayers.map(p => {
             const isChecked = appState.selectedFilterPlayers.includes(p);
             return `
-                <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}')">
+                <label class="filter-checkbox-item">
+                    <input type="checkbox" value="${escapeHtml(p)}" ${isChecked ? 'checked' : ''} onchange="handleFilterPlayerToggle('${escapeHtml(p)}', this.checked)">
                     <span class="custom-checkbox"></span>
                     <span>${escapeHtml(p)}</span>
-                </div>
+                </label>
             `;
         }).join('');
 
