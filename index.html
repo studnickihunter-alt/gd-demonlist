@@ -60,7 +60,7 @@
 
         .header-left { display: flex; align-items: center; gap: 12px; }
 
-        /* Search Bar with search.png embedded inside */
+        /* Shortened Search Bar with search.png embedded inside */
         .search-bar-wrapper {
             position: relative;
             display: flex;
@@ -104,17 +104,18 @@
         }
         .filter-dropdown-content.show { display: block; }
         
-        /* Custom checkbox using greybox.png background and check.png overlay */
+        /* Checkbox item using greybox.png background and check.png overlay */
         .filter-checkbox-item {
             display: flex; align-items: center; gap: 8px; font-size: 0.75rem; padding: 5px 0; color: var(--text-main); cursor: pointer; font-weight: 600;
             user-select: none;
         }
-        .custom-checkbox {
+        .filter-checkbox-item input[type="checkbox"] {
+            appearance: none; -webkit-appearance: none;
             width: 18px; height: 18px; border-radius: 3px;
             background-image: url('greybox.png'); background-size: contain; background-repeat: no-repeat; background-position: center;
-            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; outline: none;
         }
-        .filter-checkbox-item.checked .custom-checkbox {
+        .filter-checkbox-item input[type="checkbox"]:checked {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
             background-repeat: no-repeat, no-repeat;
@@ -475,10 +476,11 @@
         container.innerHTML = allPlayers.map(p => {
             const isChecked = appState.selectedFilterPlayers.includes(p);
             return `
-                <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}')">
+                <label class="filter-checkbox-item">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleFilterPlayerToggle('${escapeHtml(p)}')">
                     <span class="custom-checkbox"></span>
                     <span>${escapeHtml(p)}</span>
-                </div>
+                </label>
             `;
         }).join('');
 
