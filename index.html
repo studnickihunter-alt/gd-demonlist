@@ -60,7 +60,7 @@
 
         .header-left { display: flex; align-items: center; gap: 12px; }
 
-        /* Search Bar with search.png embedded inside at the far left */
+        /* Search Bar with search.png embedded inside */
         .search-bar-wrapper {
             position: relative;
             display: flex;
@@ -114,7 +114,6 @@
             background-image: url('greybox.png'); background-size: contain; background-repeat: no-repeat; background-position: center;
             display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .filter-checkbox-item input[type="checkbox"] { display: none; }
         .filter-checkbox-item.checked .custom-checkbox {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
@@ -432,8 +431,7 @@
         }
     }
 
-    function handleFilterPlayerToggle(playerName, event) {
-        event.stopPropagation();
+    function handleFilterPlayerToggle(playerName) {
         if (!appState._userManuallyUnchecked) {
             appState._userManuallyUnchecked = new Set();
         }
@@ -443,11 +441,9 @@
         const isCurrentlyChecked = appState.selectedFilterPlayers.includes(playerName);
 
         if (isCurrentlyChecked) {
-            // Deselecting
             appState._userManuallyUnchecked.add(playerName);
             appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
         } else {
-            // Selecting
             appState._userManuallyUnchecked.delete(playerName);
             if (!appState.selectedFilterPlayers.includes(playerName)) {
                 appState.selectedFilterPlayers.push(playerName);
@@ -479,7 +475,7 @@
         container.innerHTML = allPlayers.map(p => {
             const isChecked = appState.selectedFilterPlayers.includes(p);
             return `
-                <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}', event)">
+                <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}')">
                     <span class="custom-checkbox"></span>
                     <span>${escapeHtml(p)}</span>
                 </div>
