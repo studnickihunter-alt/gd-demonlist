@@ -60,7 +60,7 @@
 
         .header-left { display: flex; align-items: center; gap: 12px; }
 
-        /* Shortened Search Bar with search.png embedded inside */
+        /* Search Bar with search.png embedded inside */
         .search-bar-wrapper {
             position: relative;
             display: flex;
@@ -185,10 +185,35 @@
         @media (min-width: 650px) { .level-card { flex-direction: row; min-height: 120px; } }
         .level-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.14); }
 
-        .level-card.rank-1 { background: linear-gradient(135deg, #fff5b8 0%, #ffdf6b 100%); }
-        .level-card.rank-2 { background: linear-gradient(135deg, #f2f4f7 0%, #d5d9e0 100%); }
-        .level-card.rank-3 { background: linear-gradient(135deg, #f9e2cc 0%, #e0ab76 100%); }
-        .level-card.rank-top10 { background: linear-gradient(135deg, #ffe5ec 0%, #ffb3c6 100%); }
+        /* Textured, shiny metallic gradients for Top 3 */
+        .level-card.rank-1 { 
+            background: linear-gradient(135deg, #fff9d6 0%, #ffd700 35%, #e6be00 70%, #fff3b0 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 3px 10px rgba(255,215,0,0.3);
+            border: 1px solid #d4af37 !important;
+        }
+        .level-card.rank-2 { 
+            background: linear-gradient(135deg, #ffffff 0%, #e0e5ec 35%, #bfc6d0 70%, #f4f6fa 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 3px 10px rgba(180,190,200,0.3);
+            border: 1px solid #adb5bd !important;
+        }
+        .level-card.rank-3 { 
+            background: linear-gradient(135deg, #fcead8 0%, #e08b42 35%, #b55d12 70%, #ffd4b2 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 3px 10px rgba(224,139,66,0.3);
+            border: 1px solid #cd7f32 !important;
+        }
+
+        /* Tier Background Colors */
+        .level-card.rank-top10-sub { background-color: #1a1c23; color: #e9ecef; }
+        [data-theme="dark"] .level-card.rank-top10-sub { background-color: #0b0c0e; }
+
+        .level-card.rank-tier-pink { background-color: #ffb3c6; color: #212529; }
+        [data-theme="dark"] .level-card.rank-tier-pink { background-color: #5a1e28; color: #e9ecef; }
+
+        .level-card.rank-tier-yellow { background-color: #fff3b0; color: #212529; }
+        [data-theme="dark"] .level-card.rank-tier-yellow { background-color: #524712; color: #e9ecef; }
+
+        .level-card.rank-tier-green { background-color: #b8f2cb; color: #212529; }
+        [data-theme="dark"] .level-card.rank-tier-green { background-color: #164223; color: #e9ecef; }
 
         .level-card.beaten-level {
             border: 6px solid #ffd700 !important;
@@ -388,8 +413,8 @@
         theme: 'light',
         currentView: 'main',
         viewingPlayer: null,
-        excludedFilterPlayers: [], // Track explicitly unchecked players (bulletproof persistence)
-        hideMyCompletions: false,
+        selectedFilterPlayers: null, 
+        hideMyCompletions: false, // Starts false so completions are shown by default
         levels: [],
         players: {}
     };
@@ -418,19 +443,36 @@
         }
     }
 
-    function isPlayerChecked(playerName) {
-        if (!appState.excludedFilterPlayers) appState.excludedFilterPlayers = [];
-        return !appState.excludedFilterPlayers.includes(playerName);
+    function initFilterPlayersIfNeeded() {
+        const allPlayerNames = Object.keys(appState.players);
+        if (!appState.selectedFilterPlayers) {
+            appState.selectedFilterPlayers = [...allPlayerNames];
+        } else {
+            allPlayerNames.forEach(name => {
+                if (!appState.selectedFilterPlayers.includes(name) && !appState._userManuallyUnchecked?.has(name)) {
+                    appState.selectedFilterPlayers.push(name);
+                }
+            });
+        }
     }
 
     function handleFilterPlayerToggle(playerName) {
-        if (!appState.excludedFilterPlayers) appState.excludedFilterPlayers = [];
+        if (!appState._userManuallyUnchecked) {
+            appState._userManuallyUnchecked = new Set();
+        }
         
-        const idx = appState.excludedFilterPlayers.indexOf(playerName);
-        if (idx > -1) {
-            appState.excludedFilterPlayers.splice(idx, 1); // remove from excluded -> now checked
+        initFilterPlayersIfNeeded();
+
+        const isCurrentlyChecked = appState.selectedFilterPlayers.includes(playerName);
+
+        if (isCurrentlyChecked) {
+            appState._userManuallyUnchecked.add(playerName);
+            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
         } else {
-            appState.excludedFilterPlayers.push(playerName); // add to excluded -> now unchecked
+            appState._userManuallyUnchecked.delete(playerName);
+            if (!appState.selectedFilterPlayers.includes(playerName)) {
+                appState.selectedFilterPlayers.push(playerName);
+            }
         }
 
         renderFilterCheckboxes();
@@ -447,6 +489,7 @@
         const container = document.getElementById('playerCheckboxesContainer');
         const hideBtnContainer = document.getElementById('hideCompletionsWrapper');
         const allPlayers = Object.keys(appState.players);
+        initFilterPlayersIfNeeded();
 
         if (allPlayers.length === 0) {
             container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No accounts found</div>`;
@@ -455,7 +498,7 @@
         }
 
         container.innerHTML = allPlayers.map(p => {
-            const isChecked = isPlayerChecked(p);
+            const isChecked = appState.selectedFilterPlayers.includes(p);
             return `
                 <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}')">
                     <span class="custom-checkbox"></span>
@@ -578,6 +621,8 @@
         if (names.length > 0 && !appState.viewingPlayer) {
             appState.viewingPlayer = names[0];
         }
+
+        initFilterPlayersIfNeeded();
 
         document.documentElement.setAttribute('data-theme', appState.theme || 'light');
         purgeUnusedLevels();
@@ -866,11 +911,14 @@
         return `<img class="badge-diff-img" src="${imgName}" alt="${safeAlt}" title="${safeAlt}" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${safeAlt}'));">`;
     }
 
-    function getRankBgClass(rank) {
+    function getRankCardClass(rank) {
         if (rank === 1) return 'rank-1';
         if (rank === 2) return 'rank-2';
         if (rank === 3) return 'rank-3';
-        if (rank >= 4 && rank <= 10) return 'rank-top10';
+        if (rank >= 4 && rank <= 10) return 'rank-top10-sub';
+        if (rank >= 11 && rank <= 25) return 'rank-tier-pink';
+        if (rank >= 26 && rank <= 50) return 'rank-tier-yellow';
+        if (rank >= 51 && rank <= 100) return 'rank-tier-green';
         return '';
     }
 
@@ -959,17 +1007,16 @@
         const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
         let list = baseList.map((lvl, originalIndex) => ({ ...lvl, originalRank: originalIndex + 1 }));
 
-        // 1. Account Dropdown Filter using excludedFilterPlayers (Strict: level shows only if at least one checked account completed it)
-        if (!appState.excludedFilterPlayers) appState.excludedFilterPlayers = [];
-        const allPlayerNames = Object.keys(appState.players);
-        const activeSelectedPlayers = allPlayerNames.filter(p => !appState.excludedFilterPlayers.includes(p));
+        initFilterPlayersIfNeeded();
 
-        list = list.filter(lvl => {
-            const victors = getVictorsForLevel(lvl.id);
-            if (victors.length === 0) return false;
-            // Level appears if at least one currently checked player is among its victors
-            return victors.some(v => activeSelectedPlayers.includes(v));
-        });
+        // 1. Account Dropdown Filter
+        if (appState.selectedFilterPlayers) {
+            list = list.filter(lvl => {
+                const victors = getVictorsForLevel(lvl.id);
+                if (victors.length === 0) return false;
+                return victors.some(v => appState.selectedFilterPlayers.includes(v));
+            });
+        }
 
         // 2. Hide My Completions Filter
         if (appState.hideMyCompletions && activeSessionPlayer && appState.players[activeSessionPlayer]) {
@@ -1005,7 +1052,7 @@
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
-            const rankClass = getRankBgClass(rank);
+            const rankClass = getRankCardClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
 
             const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
@@ -1094,7 +1141,7 @@
             const personalRank = lvl.originalRank;
             const media = getLevelMedia(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
-            const rankClass = getRankBgClass(personalRank);
+            const rankClass = getRankCardClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
@@ -1162,7 +1209,7 @@
             const personalRank = lvl.originalRank;
             const media = getLevelMedia(lvl);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
-            const rankClass = getRankBgClass(personalRank);
+            const rankClass = getRankCardClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
             const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
