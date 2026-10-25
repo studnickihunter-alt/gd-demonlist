@@ -58,9 +58,22 @@
             z-index: 100;
         }
 
-        .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; text-transform: uppercase; }
-        .brand span { color: #4dabf7; font-weight: 400; font-size: 0.8rem; display: none; }
-        @media(min-width: 600px) { .brand span { display: inline; } }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .brand { font-weight: 800; font-size: 1.15rem; text-transform: uppercase; }
+
+        /* Search Bar Top Left */
+        .search-bar-wrapper { display: flex; align-items: center; gap: 4px; }
+        .search-input {
+            padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border);
+            background: var(--bg-card); color: var(--text-main); width: 130px; font-weight: 600;
+        }
+        @media(min-width: 600px) { .search-input { width: 180px; } }
+        .search-btn {
+            background: var(--accent); border: none; border-radius: 4px; padding: 4px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; height: 28px; width: 28px;
+        }
+        .search-btn:hover { background: var(--accent-hover); }
+        .search-btn img { width: 16px; height: 16px; display: block; filter: brightness(0) invert(1); }
 
         .nav-tabs-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .nav-tabs { display: flex; gap: 4px; align-items: center; }
@@ -241,7 +254,16 @@
 <body id="pageBody" onmousemove="checkBackgroundReset(event)">
 
 <header>
-    <div class="brand">STUDMERLIST</div>
+    <div class="header-left">
+        <div class="brand">STUDMERLIST</div>
+        <!-- Search bar top left with search.png button -->
+        <div class="search-bar-wrapper">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search name or ID..." onkeydown="if(event.key==='Enter') triggerSearch()">
+            <button class="search-btn" onclick="triggerSearch()" title="Search">
+                <img src="search.png" alt="Search" onerror="this.replaceWith('🔍')">
+            </button>
+        </div>
+    </div>
     <div class="nav-tabs-container">
         <div class="nav-tabs">
             <div style="display: flex; align-items: center; gap: 2px;">
@@ -250,11 +272,7 @@
                 <div class="filter-dropdown-wrapper">
                     <button class="filter-dropdown-btn" onclick="toggleFilterDropdown(event)">▼</button>
                     <div id="filterDropdownContent" class="filter-dropdown-content" onclick="event.stopPropagation()">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">
-                            <span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted);">Accounts:</span>
-                            <span style="font-size: 0.655rem; color: var(--accent); cursor: pointer; font-weight: 700;" onclick="toggleAllFilters(true)">All</span> | 
-                            <span style="font-size: 0.65rem; color: var(--danger); cursor: pointer; font-weight: 700;" onclick="toggleAllFilters(false)">None</span>
-                        </div>
+                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Accounts:</div>
                         <div id="playerCheckboxesContainer"></div>
                     </div>
                 </div>
@@ -377,14 +395,7 @@
         } else {
             appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
         }
-        renderMainList();
-    }
-
-    function toggleAllFilters(selectVal) {
-        const allPlayerNames = Object.keys(appState.players);
-        appState.selectedFilterPlayers = selectVal ? [...allPlayerNames] : [];
-        renderFilterCheckboxes();
-        renderMainList();
+        renderCurrentActiveList();
     }
 
     function renderFilterCheckboxes() {
@@ -809,13 +820,25 @@
         );
     }
 
+    function renderCurrentActiveList() {
+        if (appState.currentView === 'main') {
+            renderMainList();
+        } else if (appState.currentView === 'stats') {
+            renderPlayerStats();
+        } else if (appState.currentView === 'account') {
+            renderAccountPersonalList();
+        }
+    }
+
+    function triggerSearch() {
+        renderCurrentActiveList();
+    }
+
     function renderAll() {
         renderAuthPanel();
         renderLeaderboard();
         renderFilterCheckboxes();
-        renderMainList();
-        renderPlayerStats();
-        renderAccountPersonalList();
+        renderCurrentActiveList();
     }
 
     function renderAuthPanel() {
@@ -870,13 +893,12 @@
         }).join('');
     }
 
-    function renderMainList() {
-        const container = document.getElementById('mainLevelsList');
-        let list = appState.levels;
+    function applySearchAndFilter(levelsList) {
+        const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+        let list = levelsList;
 
-        initFilterPlayersIfNeeded();
-
-        if (appState.selectedFilterPlayers) {
+        // Account dropdown filter (Main list only)
+        if (appState.currentView === 'main' && appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
                 if (victors.length === 0) return false;
@@ -884,8 +906,24 @@
             });
         }
 
+        // Search query filter (Name or Level ID, case-insensitive)
+        if (query) {
+            list = list.filter(lvl => {
+                const nameMatch = String(lvl.name || '').toLowerCase().includes(query);
+                const idMatch = String(lvl.id || '').toLowerCase().includes(query);
+                return nameMatch || idMatch;
+            });
+        }
+
+        return list;
+    }
+
+    function renderMainList() {
+        const container = document.getElementById('mainLevelsList');
+        let list = applySearchAndFilter(appState.levels);
+
         if (list.length === 0) {
-            container.innerHTML = `<div class="empty-state"><h3>No Levels Match Filter</h3><p style="margin-top:6px;">Try selecting different accounts from the filter dropdown.</p></div>`;
+            container.innerHTML = `<div class="empty-state"><h3>No Levels Found</h3><p style="margin-top:6px;">No levels match your search or filter criteria.</p></div>`;
             return;
         }
 
@@ -949,7 +987,9 @@
 
         const data = appState.players[player];
         const totalPoints = getPlayerPoints(player);
-        const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
+        let beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
+
+        beatenLevels = applySearchAndFilter(beatenLevels);
 
         document.getElementById('playerProfileTitle').textContent = `${player}'s Profile`;
         document.getElementById('playerProfileStatsText').textContent = `${totalPoints.toFixed(2)} Points • ${beatenLevels.length} Completed Levels`;
@@ -976,7 +1016,7 @@
 
         const personalListEl = document.getElementById('playerPersonalList');
         if (beatenLevels.length === 0) {
-            personalListEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels</h3><p style="margin-top:6px;">This user has not completed any levels yet.</p></div>`;
+            personalListEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels</h3><p style="margin-top:6px;">No levels match your search or filter criteria.</p></div>`;
             return;
         }
 
@@ -1039,10 +1079,12 @@
 
         titleEl.textContent = `${activeSessionPlayer}'s Levels`;
         const data = appState.players[activeSessionPlayer];
-        const beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
+        let beatenLevels = appState.levels.map((lvl, idx) => ({ ...lvl, mainRank: idx + 1, pts: getLevelPoints(lvl) })).filter(lvl => data.completions.includes(String(lvl.id)));
+
+        beatenLevels = applySearchAndFilter(beatenLevels);
 
         if (beatenLevels.length === 0) {
-            listEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels Yet</h3><p style="margin-top:6px;">Submit a level completion above to build your personal ranking.</p></div>`;
+            listEl.innerHTML = `<div class="empty-state"><h3>No Completed Levels Yet</h3><p style="margin-top:6px;">No levels match your search or filter criteria.</p></div>`;
             return;
         }
 
