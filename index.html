@@ -60,19 +60,32 @@
 
         .header-left { display: flex; align-items: center; gap: 12px; }
 
-        /* Search Bar Top Left */
-        .search-bar-wrapper { display: flex; align-items: center; gap: 4px; }
+        /* Search Bar with search.png embedded inside at the far left */
+        .search-bar-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
         .search-input {
-            padding: 5px 10px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border);
-            background: var(--bg-card); color: var(--text-main); width: 140px; font-weight: 600;
+            padding: 6px 10px 6px 32px; /* space for icon on left */
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-main);
+            width: 150px;
+            font-weight: 600;
         }
-        @media(min-width: 600px) { .search-input { width: 190px; } }
-        .search-btn {
-            background: var(--accent); border: none; border-radius: 4px; padding: 4px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; height: 30px; width: 30px;
+        @media(min-width: 600px) { .search-input { width: 200px; } }
+        .search-icon {
+            position: absolute;
+            left: 8px;
+            width: 16px;
+            height: 16px;
+            display: block;
+            pointer-events: none;
+            opacity: 0.6;
         }
-        .search-btn:hover { background: var(--accent-hover); }
-        .search-btn img { width: 18px; height: 18px; display: block; object-fit: contain; }
 
         .nav-tabs-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .nav-tabs { display: flex; gap: 4px; align-items: center; }
@@ -254,12 +267,10 @@
 
 <header>
     <div class="header-left">
-        <!-- Search bar top left with search.png button -->
+        <!-- Search bar top left with search.png embedded inside at the far left -->
         <div class="search-bar-wrapper">
+            <img src="search.png" alt="Search" class="search-icon" onerror="this.style.display='none'">
             <input type="text" id="searchInput" class="search-input" placeholder="Search name or ID..." oninput="triggerSearch()" onkeydown="if(event.key==='Enter') triggerSearch()">
-            <button class="search-btn" onclick="triggerSearch()" title="Search">
-                <img src="search.png" alt="Search" onerror="this.replaceWith('🔍')">
-            </button>
         </div>
     </div>
     <div class="nav-tabs-container">
@@ -376,9 +387,9 @@
         if (!appState.selectedFilterPlayers) {
             appState.selectedFilterPlayers = [...allPlayerNames];
         } else {
-            // Keep user's selections, but add any newly created accounts automatically
+            // Retain user's exact selections, but add newly registered accounts automatically
             allPlayerNames.forEach(name => {
-                if (!appState.selectedFilterPlayers.includes(name)) {
+                if (!appState.selectedFilterPlayers.includes(name) && !appState._userManuallyUnchecked?.has(name)) {
                     appState.selectedFilterPlayers.push(name);
                 }
             });
@@ -386,12 +397,19 @@
     }
 
     function handleFilterPlayerToggle(playerName, isChecked) {
+        if (!appState._userManuallyUnchecked) {
+            appState._userManuallyUnchecked = new Set();
+        }
+        
         initFilterPlayersIfNeeded();
+
         if (isChecked) {
+            appState._userManuallyUnchecked.delete(playerName);
             if (!appState.selectedFilterPlayers.includes(playerName)) {
                 appState.selectedFilterPlayers.push(playerName);
             }
         } else {
+            appState._userManuallyUnchecked.add(playerName);
             appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
         }
         renderCurrentActiveList();
@@ -899,7 +917,7 @@
 
         initFilterPlayersIfNeeded();
 
-        // 1. Account Dropdown Filter
+        // 1. Account Dropdown Filter (Strictly shows levels with at least one currently checked victor)
         if (appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
