@@ -104,18 +104,18 @@
         }
         .filter-dropdown-content.show { display: block; }
         
-        /* Checkbox item using greybox.png background and check.png overlay */
+        /* Custom checkbox using greybox.png background and check.png overlay */
         .filter-checkbox-item {
             display: flex; align-items: center; gap: 8px; font-size: 0.75rem; padding: 5px 0; color: var(--text-main); cursor: pointer; font-weight: 600;
             user-select: none;
         }
-        .filter-checkbox-item input[type="checkbox"] {
-            appearance: none; -webkit-appearance: none;
+        .custom-checkbox {
             width: 18px; height: 18px; border-radius: 3px;
             background-image: url('greybox.png'); background-size: contain; background-repeat: no-repeat; background-position: center;
-            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; outline: none;
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .filter-checkbox-item input[type="checkbox"]:checked {
+        .filter-checkbox-item input[type="checkbox"] { display: none; }
+        .filter-checkbox-item input[type="checkbox"]:checked + .custom-checkbox {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
             background-repeat: no-repeat, no-repeat;
@@ -424,6 +424,7 @@
         if (!appState.selectedFilterPlayers) {
             appState.selectedFilterPlayers = [...allPlayerNames];
         } else {
+            // Keep user's selections, but add any newly registered accounts automatically
             allPlayerNames.forEach(name => {
                 if (!appState.selectedFilterPlayers.includes(name) && !appState._userManuallyUnchecked?.has(name)) {
                     appState.selectedFilterPlayers.push(name);
@@ -476,11 +477,10 @@
         container.innerHTML = allPlayers.map(p => {
             const isChecked = appState.selectedFilterPlayers.includes(p);
             return `
-                <label class="filter-checkbox-item">
-                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleFilterPlayerToggle('${escapeHtml(p)}')">
+                <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}')">
                     <span class="custom-checkbox"></span>
                     <span>${escapeHtml(p)}</span>
-                </label>
+                </div>
             `;
         }).join('');
 
@@ -978,7 +978,7 @@
 
         initFilterPlayersIfNeeded();
 
-        // 1. Account Dropdown Filter
+        // 1. Account Dropdown Filter (Strict: Level only appears if at least one currently checked account has completed it)
         if (appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
