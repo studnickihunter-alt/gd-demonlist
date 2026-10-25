@@ -60,7 +60,7 @@
 
         .header-left { display: flex; align-items: center; gap: 12px; }
 
-        /* Shortened Search Bar with search.png embedded inside */
+        /* Search Bar with search.png embedded inside at the far left */
         .search-bar-wrapper {
             position: relative;
             display: flex;
@@ -115,7 +115,7 @@
             display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .filter-checkbox-item input[type="checkbox"] { display: none; }
-        .filter-checkbox-item input[type="checkbox"]:checked + .custom-checkbox {
+        .filter-checkbox-item.checked .custom-checkbox {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
             background-repeat: no-repeat, no-repeat;
@@ -293,7 +293,7 @@
 
 <header>
     <div class="header-left">
-        <!-- Search bar top left with search.png embedded inside, placeholder changed to "search" -->
+        <!-- Search bar top left with search.png embedded inside -->
         <div class="search-bar-wrapper">
             <img src="search.png" alt="Search" class="search-icon" onerror="this.style.display='none'">
             <input type="text" id="searchInput" class="search-input" placeholder="search" oninput="triggerSearch()" onkeydown="if(event.key==='Enter') triggerSearch()">
@@ -432,22 +432,29 @@
         }
     }
 
-    function handleFilterPlayerToggle(playerName, isChecked) {
+    function handleFilterPlayerToggle(playerName, event) {
+        event.stopPropagation();
         if (!appState._userManuallyUnchecked) {
             appState._userManuallyUnchecked = new Set();
         }
         
         initFilterPlayersIfNeeded();
 
-        if (isChecked) {
+        const isCurrentlyChecked = appState.selectedFilterPlayers.includes(playerName);
+
+        if (isCurrentlyChecked) {
+            // Deselecting
+            appState._userManuallyUnchecked.add(playerName);
+            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
+        } else {
+            // Selecting
             appState._userManuallyUnchecked.delete(playerName);
             if (!appState.selectedFilterPlayers.includes(playerName)) {
                 appState.selectedFilterPlayers.push(playerName);
             }
-        } else {
-            appState._userManuallyUnchecked.add(playerName);
-            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
         }
+
+        renderFilterCheckboxes();
         renderCurrentActiveList();
     }
 
@@ -472,11 +479,10 @@
         container.innerHTML = allPlayers.map(p => {
             const isChecked = appState.selectedFilterPlayers.includes(p);
             return `
-                <label class="filter-checkbox-item">
-                    <input type="checkbox" value="${escapeHtml(p)}" ${isChecked ? 'checked' : ''} onchange="handleFilterPlayerToggle('${escapeHtml(p)}', this.checked)">
+                <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}', event)">
                     <span class="custom-checkbox"></span>
-                    ${escapeHtml(p)}
-                </label>
+                    <span>${escapeHtml(p)}</span>
+                </div>
             `;
         }).join('');
 
@@ -605,14 +611,12 @@
         renderAll();
 
         try {
-            // Pull latest cloud state first to prevent overwriting concurrent updates from other users
             const latestRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
                 headers: { 'X-Master-Key': JSONBIN_API_KEY }
             });
             if (latestRes.ok) {
                 const latestData = await latestRes.json();
                 if (latestData && latestData.record && latestData.record.players) {
-                    // Merge local modifications into latest players record
                     for (let p in appState.players) {
                         latestData.record.players[p] = appState.players[p];
                     }
