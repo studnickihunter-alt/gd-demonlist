@@ -114,8 +114,7 @@
             background-image: url('greybox.png'); background-size: contain; background-repeat: no-repeat; background-position: center;
             display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .filter-checkbox-item input[type="checkbox"] { display: none; }
-        .filter-checkbox-item input[type="checkbox"]:checked + .custom-checkbox {
+        .filter-checkbox-item.checked .custom-checkbox {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
             background-repeat: no-repeat, no-repeat;
@@ -389,7 +388,7 @@
         theme: 'light',
         currentView: 'main',
         viewingPlayer: null,
-        selectedFilterPlayers: null, 
+        excludedFilterPlayers: [], // Track explicitly unchecked players (bulletproof persistence)
         hideMyCompletions: false,
         levels: [],
         players: {}
@@ -419,37 +418,19 @@
         }
     }
 
-    function initFilterPlayersIfNeeded() {
-        const allPlayerNames = Object.keys(appState.players);
-        if (!appState.selectedFilterPlayers) {
-            appState.selectedFilterPlayers = [...allPlayerNames];
-        } else {
-            // Keep user's selections, but add any newly registered accounts automatically
-            allPlayerNames.forEach(name => {
-                if (!appState.selectedFilterPlayers.includes(name) && !appState._userManuallyUnchecked?.has(name)) {
-                    appState.selectedFilterPlayers.push(name);
-                }
-            });
-        }
+    function isPlayerChecked(playerName) {
+        if (!appState.excludedFilterPlayers) appState.excludedFilterPlayers = [];
+        return !appState.excludedFilterPlayers.includes(playerName);
     }
 
     function handleFilterPlayerToggle(playerName) {
-        if (!appState._userManuallyUnchecked) {
-            appState._userManuallyUnchecked = new Set();
-        }
+        if (!appState.excludedFilterPlayers) appState.excludedFilterPlayers = [];
         
-        initFilterPlayersIfNeeded();
-
-        const isCurrentlyChecked = appState.selectedFilterPlayers.includes(playerName);
-
-        if (isCurrentlyChecked) {
-            appState._userManuallyUnchecked.add(playerName);
-            appState.selectedFilterPlayers = appState.selectedFilterPlayers.filter(p => p !== playerName);
+        const idx = appState.excludedFilterPlayers.indexOf(playerName);
+        if (idx > -1) {
+            appState.excludedFilterPlayers.splice(idx, 1); // remove from excluded -> now checked
         } else {
-            appState._userManuallyUnchecked.delete(playerName);
-            if (!appState.selectedFilterPlayers.includes(playerName)) {
-                appState.selectedFilterPlayers.push(playerName);
-            }
+            appState.excludedFilterPlayers.push(playerName); // add to excluded -> now unchecked
         }
 
         renderFilterCheckboxes();
@@ -466,7 +447,6 @@
         const container = document.getElementById('playerCheckboxesContainer');
         const hideBtnContainer = document.getElementById('hideCompletionsWrapper');
         const allPlayers = Object.keys(appState.players);
-        initFilterPlayersIfNeeded();
 
         if (allPlayers.length === 0) {
             container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No accounts found</div>`;
@@ -475,7 +455,7 @@
         }
 
         container.innerHTML = allPlayers.map(p => {
-            const isChecked = appState.selectedFilterPlayers.includes(p);
+            const isChecked = isPlayerChecked(p);
             return `
                 <div class="filter-checkbox-item ${isChecked ? 'checked' : ''}" onclick="handleFilterPlayerToggle('${escapeHtml(p)}')">
                     <span class="custom-checkbox"></span>
@@ -547,14 +527,19 @@
         }
     }
 
-    const UPLOADED_VIDEO_IDS = ["10565740", "95355264", "60284098", "59899374", "109877068", "3979721", "113036509", "75248070", "69491632", "30219145"]; 
+    const UPLOADED_VIDEO_IDS = [
+        "10565740", "95355264", "60284098", "59899374", "109877068", 
+        "3979721", "113036509", "75248070", "69491632", "30219145", 
+        "4957691", "44062068", "65412304", "2891681", "4284013", 
+        "47620786", "40945673", "cantletgo"
+    ]; 
 
     function getLevelMedia(lvl) {
         const strId = String(lvl.id);
         const isSpecial = SPECIAL_LEVELS.some(s => String(s.id) === strId);
         const thumbUrl = isSpecial ? SPECIAL_LEVELS.find(s => String(s.id) === strId).thumb : `https://levelthumbs.prevter.me/thumbnail/${strId}`;
 
-        if (!isSpecial && UPLOADED_VIDEO_IDS.includes(strId)) {
+        if (UPLOADED_VIDEO_IDS.includes(strId) || UPLOADED_VIDEO_IDS.includes(String(lvl.id).toLowerCase())) {
             return { 
                 src: `https://github.com/studnickihunter-alt/gd-demonlist/releases/download/v1.0/${strId}.mp4`, 
                 thumb: thumbUrl, 
@@ -573,7 +558,7 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data.record && Object.keys(data.record).length > 0) {
-                    appState = data.record;
+                    appState = Object.assign({}, appState, data.record);
                 }
             }
         } catch (e) {
@@ -593,8 +578,6 @@
         if (names.length > 0 && !appState.viewingPlayer) {
             appState.viewingPlayer = names[0];
         }
-
-        initFilterPlayersIfNeeded();
 
         document.documentElement.setAttribute('data-theme', appState.theme || 'light');
         purgeUnusedLevels();
@@ -976,16 +959,17 @@
         const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
         let list = baseList.map((lvl, originalIndex) => ({ ...lvl, originalRank: originalIndex + 1 }));
 
-        initFilterPlayersIfNeeded();
+        // 1. Account Dropdown Filter using excludedFilterPlayers (Strict: level shows only if at least one checked account completed it)
+        if (!appState.excludedFilterPlayers) appState.excludedFilterPlayers = [];
+        const allPlayerNames = Object.keys(appState.players);
+        const activeSelectedPlayers = allPlayerNames.filter(p => !appState.excludedFilterPlayers.includes(p));
 
-        // 1. Account Dropdown Filter (Strict: Level only appears if at least one currently checked account has completed it)
-        if (appState.selectedFilterPlayers) {
-            list = list.filter(lvl => {
-                const victors = getVictorsForLevel(lvl.id);
-                if (victors.length === 0) return false;
-                return victors.some(v => appState.selectedFilterPlayers.includes(v));
-            });
-        }
+        list = list.filter(lvl => {
+            const victors = getVictorsForLevel(lvl.id);
+            if (victors.length === 0) return false;
+            // Level appears if at least one currently checked player is among its victors
+            return victors.some(v => activeSelectedPlayers.includes(v));
+        });
 
         // 2. Hide My Completions Filter
         if (appState.hideMyCompletions && activeSessionPlayer && appState.players[activeSessionPlayer]) {
