@@ -115,7 +115,6 @@
             display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .filter-checkbox-item input[type="checkbox"] { display: none; }
-        /* When checked, layer check.png directly over greybox.png */
         .filter-checkbox-item input[type="checkbox"]:checked + .custom-checkbox {
             background-image: url('check.png'), url('greybox.png');
             background-size: contain, contain;
@@ -599,13 +598,28 @@
         renderAll();
     }
 
-    async function saveCloudData() {
+    async function saveAndSyncCloudData() {
         document.documentElement.setAttribute('data-theme', appState.theme || 'light');
         purgeUnusedLevels();
         sortLevelsHardestFirst();
         renderAll();
 
         try {
+            // Pull latest cloud state first to prevent overwriting concurrent updates from other users
+            const latestRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': JSONBIN_API_KEY }
+            });
+            if (latestRes.ok) {
+                const latestData = await latestRes.json();
+                if (latestData && latestData.record && latestData.record.players) {
+                    // Merge local modifications into latest players record
+                    for (let p in appState.players) {
+                        latestData.record.players[p] = appState.players[p];
+                    }
+                    appState.players = latestData.record.players;
+                }
+            }
+
             await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
@@ -653,7 +667,7 @@
         msgBox.style.display = 'none';
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
-        saveCloudData();
+        saveAndSyncCloudData();
         switchView('account');
     }
 
@@ -681,7 +695,7 @@
         msgBox.style.display = 'none';
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
-        saveCloudData();
+        saveAndSyncCloudData();
         switchView('account');
     }
 
@@ -689,7 +703,7 @@
         activeSessionPlayer = null;
         appState.hideMyCompletions = false;
         sessionStorage.removeItem('active_session_player');
-        saveCloudData();
+        saveAndSyncCloudData();
     }
 
     function adminDeleteAccount(targetName) {
@@ -707,7 +721,7 @@
         if (appState.viewingPlayer === targetName) {
             appState.viewingPlayer = Object.keys(appState.players)[0] || null;
         }
-        saveCloudData();
+        saveAndSyncCloudData();
     }
 
     function purgeUnusedLevels() {
@@ -826,7 +840,7 @@
             input.value = '';
             tierInput.value = '';
             statusBox.style.display = 'none';
-            await saveCloudData();
+            await saveAndSyncCloudData();
         } catch (err) {
             statusBox.textContent = "Error fetching level data.";
             statusBox.className = 'status-box status-error';
@@ -851,18 +865,7 @@
             comps.push(strId);
         }
 
-        try {
-            await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
-                body: JSON.stringify(appState)
-            });
-        } catch (e) {
-            console.error("Cloud save error", e);
-        }
-
-        sortLevelsHardestFirst();
-        renderAll();
+        await saveAndSyncCloudData();
     }
 
     function getDifficultyBadgeHtml(diffStr) {
