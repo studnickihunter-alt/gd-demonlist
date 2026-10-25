@@ -420,7 +420,6 @@
         }
     }
 
-    // Hover handler: swap static image out for playing video with audio from the beginning
     function handleCardMouseEnter(wrapperEl, media, thumbUrl) {
         setDynamicBackground(thumbUrl);
         if (media.isVideo) {
@@ -430,7 +429,6 @@
         }
     }
 
-    // Mouse leave handler: stop video and swap back to static GDDL thumbnail image
     function handleCardMouseLeave(wrapperEl, thumbUrl, levelId, beaten) {
         clearDynamicBackground();
         const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
@@ -441,7 +439,6 @@
         `;
     }
 
-    // Click handler: locks background and plays video with audio from the beginning
     function handleCardClick(wrapperEl, media, thumbUrl, levelId, beaten, event) {
         event.stopPropagation();
         lockedBackgroundUrl = thumbUrl;
@@ -879,8 +876,6 @@
 
         initFilterPlayersIfNeeded();
 
-        // Updated filter logic: Level appears if at least one selected filter account has completed it.
-        // It vanishes only if NONE of its victors are selected.
         if (appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
