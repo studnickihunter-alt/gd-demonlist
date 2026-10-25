@@ -67,7 +67,7 @@
             align-items: center;
         }
         .search-input {
-            padding: 6px 10px 6px 32px; /* space for icon on left */
+            padding: 6px 10px 6px 32px;
             font-size: 0.75rem;
             border-radius: 4px;
             border: 1px solid var(--border);
@@ -90,7 +90,7 @@
         .nav-tabs-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .nav-tabs { display: flex; gap: 4px; align-items: center; }
         
-        /* Compact arrow dropdown next to Main List tab */
+        /* Filter Dropdown next to Main List tab */
         .filter-dropdown-wrapper { position: relative; display: inline-block; }
         .filter-dropdown-btn {
             background: #343a40; color: #fff; border: 1px solid var(--border);
@@ -99,11 +99,31 @@
         .filter-dropdown-btn:hover { background: #495057; }
         .filter-dropdown-content {
             display: none; position: absolute; left: 0; background-color: var(--bg-card);
-            min-width: 170px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 200;
+            min-width: 190px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 200;
             border: 1px solid var(--border); border-radius: 4px; padding: 10px;
         }
         .filter-dropdown-content.show { display: block; }
-        .filter-checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; padding: 4px 0; color: var(--text-main); cursor: pointer; font-weight: 600; }
+        
+        /* Custom checkbox using check.png styling */
+        .filter-checkbox-item {
+            display: flex; align-items: center; gap: 8px; font-size: 0.75rem; padding: 5px 0; color: var(--text-main); cursor: pointer; font-weight: 600;
+            user-select: none;
+        }
+        .custom-checkbox {
+            width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-body);
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color 0.15s;
+        }
+        .filter-checkbox-item input[type="checkbox"] { display: none; }
+        .filter-checkbox-item input[type="checkbox"]:checked + .custom-checkbox {
+            background-image: url('check.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-color: var(--accent);
+        }
+
+        .hide-completions-btn {
+            width: 100%; margin-top: 8px; padding: 6px 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            background-color: var(--secondary, #495057); color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: background 0.15s;
+        }
+        .hide-completions-btn.active { background-color: var(--danger); }
+        .hide-completions-btn:hover { opacity: 0.9; }
 
         .tab-btn {
             background: transparent; color: #adb5bd; border: none; padding: 6px 10px;
@@ -283,6 +303,7 @@
                     <div id="filterDropdownContent" class="filter-dropdown-content" onclick="event.stopPropagation()">
                         <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Accounts:</div>
                         <div id="playerCheckboxesContainer"></div>
+                        <div id="hideCompletionsWrapper"></div>
                     </div>
                 </div>
             </div>
@@ -354,6 +375,7 @@
         currentView: 'main',
         viewingPlayer: null,
         selectedFilterPlayers: null, 
+        hideMyCompletions: false,
         levels: [],
         players: {}
     };
@@ -387,7 +409,7 @@
         if (!appState.selectedFilterPlayers) {
             appState.selectedFilterPlayers = [...allPlayerNames];
         } else {
-            // Retain user's exact selections, but add newly registered accounts automatically
+            // Add any newly registered accounts automatically without overwriting current checks/unchecks
             allPlayerNames.forEach(name => {
                 if (!appState.selectedFilterPlayers.includes(name) && !appState._userManuallyUnchecked?.has(name)) {
                     appState.selectedFilterPlayers.push(name);
@@ -415,13 +437,21 @@
         renderCurrentActiveList();
     }
 
+    function toggleHideMyCompletions() {
+        appState.hideMyCompletions = !appState.hideMyCompletions;
+        renderFilterCheckboxes();
+        renderCurrentActiveList();
+    }
+
     function renderFilterCheckboxes() {
         const container = document.getElementById('playerCheckboxesContainer');
+        const hideBtnContainer = document.getElementById('hideCompletionsWrapper');
         const allPlayers = Object.keys(appState.players);
         initFilterPlayersIfNeeded();
 
         if (allPlayers.length === 0) {
             container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No accounts found</div>`;
+            hideBtnContainer.innerHTML = '';
             return;
         }
 
@@ -430,10 +460,22 @@
             return `
                 <label class="filter-checkbox-item">
                     <input type="checkbox" value="${escapeHtml(p)}" ${isChecked ? 'checked' : ''} onchange="handleFilterPlayerToggle('${escapeHtml(p)}', this.checked)">
+                    <span class="custom-checkbox"></span>
                     ${escapeHtml(p)}
                 </label>
             `;
         }).join('');
+
+        // Render "Hide My Completions" button at the bottom of dropdown if logged in
+        if (activeSessionPlayer && appState.players[activeSessionPlayer]) {
+            hideBtnContainer.innerHTML = `
+                <button class="hide-completions-btn ${appState.hideMyCompletions ? 'active' : ''}" onclick="toggleHideMyCompletions()">
+                    ${appState.hideMyCompletions ? 'Show My Completions' : 'Hide My Completions'}
+                </button>
+            `;
+        } else {
+            hideBtnContainer.innerHTML = '';
+        }
     }
 
     function setDynamicBackground(url) {
@@ -631,6 +673,7 @@
 
     function handleLogout() {
         activeSessionPlayer = null;
+        appState.hideMyCompletions = false;
         sessionStorage.removeItem('active_session_player');
         saveCloudData();
     }
@@ -910,14 +953,14 @@
         }).join('');
     }
 
-    // Helper to filter levels by Account checkboxes and Search Query while preserving original list ranking numbers
+    // Helper to filter levels by Account checkboxes, "Hide My Completions", and Search Query while preserving original list ranking numbers
     function getFilteredAndSearchedLevels(baseList) {
         const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
         let list = baseList.map((lvl, originalIndex) => ({ ...lvl, originalRank: originalIndex + 1 }));
 
         initFilterPlayersIfNeeded();
 
-        // 1. Account Dropdown Filter (Strictly shows levels with at least one currently checked victor)
+        // 1. Account Dropdown Filter (Shows level if at least one selected filter account has completed it)
         if (appState.selectedFilterPlayers) {
             list = list.filter(lvl => {
                 const victors = getVictorsForLevel(lvl.id);
@@ -926,7 +969,13 @@
             });
         }
 
-        // 2. Search Query Filter (Name or ID, case insensitive)
+        // 2. Hide My Completions Filter
+        if (appState.hideMyCompletions && activeSessionPlayer && appState.players[activeSessionPlayer]) {
+            const myCompletions = appState.players[activeSessionPlayer].completions || [];
+            list = list.filter(lvl => !myCompletions.includes(String(lvl.id)));
+        }
+
+        // 3. Search Query Filter (Name or ID, case insensitive)
         if (query) {
             list = list.filter(lvl => {
                 const nameMatch = String(lvl.name || '').toLowerCase().includes(query);
