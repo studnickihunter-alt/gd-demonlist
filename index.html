@@ -207,7 +207,8 @@
             .level-thumb-wrapper {
                 width: 220px;
                 min-width: 220px;
-                height: 120px;
+                height: auto;
+                min-height: 120px;
             }
         }
         .level-thumb, .level-video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -232,27 +233,55 @@
         @media(min-width: 600px) { .level-name { font-size: 1.35rem; } }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victor-row { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; }
+        .victor-section { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; color: var(--text-muted); }
+        .victor-table {
+            width: 100%;
+            max-width: 320px;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        [data-theme="dark"] .victor-table { background: rgba(255, 255, 255, 0.03); }
+        .victor-table th, .victor-table td {
+            padding: 4px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .victor-table th {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .victor-table tr:last-child td { border-bottom: none; }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
-            padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer;
+            padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer; display: inline-block;
         }
         [data-theme="dark"] .victor-tag { background-color: rgba(64, 192, 87, 0.18); color: #69db7c; }
         .victor-tag:hover { text-decoration: underline; }
+        .victor-date-cell { font-weight: 600; color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; }
 
-        .level-meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
+        .level-meta { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
         .badge-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; display: flex; align-items: center; }
         .badge-diff-img { height: 26px; width: auto; display: block; }
         .badge-points { background-color: rgba(0, 102, 204, 0.12); color: var(--accent); }
 
+        .action-btn-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .completion-action-btn {
-            font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px;
+            font-size: 0.72rem; font-weight: 700; padding: 6px 10px; border-radius: 4px;
             background-color: var(--success); color: #fff; border: none; cursor: pointer; text-transform: uppercase;
         }
         .completion-action-btn.is-beaten {
             background-color: var(--danger);
+        }
+        .completion-action-btn.change-date-btn {
+            background-color: var(--accent);
         }
         .completion-action-btn:hover { opacity: 0.9; }
 
@@ -367,6 +396,10 @@
                 <label for="levelTierInput">Level Points (Optional, must be format like 7.26)</label>
                 <input type="text" id="levelTierInput" placeholder="e.g. 23.98">
             </div>
+            <div class="form-group">
+                <label for="levelDateInput">Completion Date (Optional)</label>
+                <input type="date" id="levelDateInput">
+            </div>
             <button style="width: 100%;" onclick="fetchAndAddLevel()" id="addBtn">Submit Completion</button>
             <div id="statusBox" class="status-box"></div>
         </div>
@@ -379,6 +412,9 @@
         <div id="accountPersonalList" class="list-container"></div>
     </div>
 </div>
+
+<!-- Hidden date picker for updating completion dates directly -->
+<input type="date" id="hiddenDatePicker" style="display:none;" onchange="applyDatePickerChange(this)">
 
 <script>
     const BIN_ID = '6adc18bcffd5d1605387610c';
@@ -403,6 +439,7 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
+    let pendingDateChangeLevelId = null;
 
     function toggleFilterDropdown(event) {
         event.stopPropagation();
@@ -550,6 +587,14 @@
         return { src: thumbUrl, thumb: thumbUrl, isVideo: false };
     }
 
+    function ensurePlayerObjects() {
+        if (!appState.players) appState.players = {};
+        for (let p in appState.players) {
+            if (!appState.players[p].completions) appState.players[p].completions = [];
+            if (!appState.players[p].completionDates) appState.players[p].completionDates = {};
+        }
+    }
+
     async function loadCloudData() {
         try {
             const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
@@ -567,6 +612,7 @@
         
         if (!appState.players) appState.players = {};
         if (!appState.levels) appState.levels = [];
+        ensurePlayerObjects();
 
         SPECIAL_LEVELS.forEach(sp => {
             if (!appState.levels.some(l => String(l.id) === String(sp.id))) {
@@ -586,6 +632,7 @@
     }
 
     async function saveAndSyncCloudData() {
+        ensurePlayerObjects();
         document.documentElement.setAttribute('data-theme', appState.theme || 'light');
         purgeUnusedLevels();
         sortLevelsHardestFirst();
@@ -645,7 +692,7 @@
             return;
         }
 
-        appState.players[username] = { password: password, completions: [] };
+        appState.players[username] = { password: password, completions: [], completionDates: {} };
         activeSessionPlayer = username;
         sessionStorage.setItem('active_session_player', username);
         appState.viewingPlayer = username;
@@ -713,7 +760,7 @@
         appState.levels = appState.levels.filter(lvl => {
             if (SPECIAL_LEVELS.some(sp => String(sp.id) === String(lvl.id))) return true;
             for (let p in appState.players) {
-                if (appState.players[p].completions.includes(String(lvl.id))) return true;
+                if (appState.players[p].completions && appState.players[p].completions.includes(String(lvl.id))) return true;
             }
             return false;
         });
@@ -732,7 +779,7 @@
 
     function getPlayerPoints(playerName) {
         const data = appState.players[playerName];
-        if (!data) return 0;
+        if (!data || !data.completions) return 0;
         let total = 0;
         appState.levels.forEach(lvl => {
             if (data.completions.includes(String(lvl.id))) total += getLevelPoints(lvl);
@@ -741,11 +788,65 @@
     }
 
     function getVictorsForLevel(levelId) {
+        const strId = String(levelId);
         const victors = [];
         for (const [p, data] of Object.entries(appState.players)) {
-            if (data.completions.includes(String(levelId))) victors.push(p);
+            if (data.completions && data.completions.includes(strId)) {
+                const rawDate = (data.completionDates && data.completionDates[strId]) ? data.completionDates[strId].trim() : null;
+                victors.push({
+                    name: p,
+                    date: rawDate && rawDate !== '?' ? rawDate : null
+                });
+            }
         }
+
+        // Sort: oldest at top, newest at bottom, no completion date (?) at the very bottom
+        victors.sort((a, b) => {
+            if (!a.date && !b.date) return a.name.localeCompare(b.name);
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+            const timeA = new Date(a.date).getTime();
+            const timeB = new Date(b.date).getTime();
+            if (isNaN(timeA) && isNaN(timeB)) return a.name.localeCompare(b.name);
+            if (isNaN(timeA)) return 1;
+            if (isNaN(timeB)) return -1;
+            if (timeA !== timeB) return timeA - timeB;
+            return a.name.localeCompare(b.name);
+        });
+
         return victors;
+    }
+
+    function renderVictorsTableHtml(victors) {
+        if (victors.length === 0) {
+            return '<div class="victor-section"><span class="victor-label">Victors: None</span></div>';
+        }
+        const rows = victors.map(v => {
+            const displayDate = v.date ? escapeHtml(v.date) : '?';
+            return `
+                <tr>
+                    <td><span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v.name)}'; switchView('stats')">${escapeHtml(v.name)}</span></td>
+                    <td class="victor-date-cell">${displayDate}</td>
+                </tr>
+            `;
+        }).join('');
+
+        return `
+            <div class="victor-section">
+                <span class="victor-label">Victors:</span>
+                <table class="victor-table">
+                    <thead>
+                        <tr>
+                            <th>Victor</th>
+                            <th>Completion Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
     function sortLevelsHardestFirst() {
@@ -780,10 +881,12 @@
 
         const input = document.getElementById('levelIdsInput');
         const tierInput = document.getElementById('levelTierInput');
+        const dateInput = document.getElementById('levelDateInput');
         const statusBox = document.getElementById('statusBox');
         const addBtn = document.getElementById('addBtn');
         const id = input.value.replace(/\D/g, '').trim();
         const tierVal = tierInput.value.trim();
+        const dateVal = dateInput.value.trim();
 
         if (!id) return;
 
@@ -817,13 +920,20 @@
                 appState.levels.push(levelObj);
             }
 
-            const comps = appState.players[activeSessionPlayer].completions;
-            if (!comps.includes(String(id))) {
-                comps.push(String(id));
+            ensurePlayerObjects();
+            const playerObj = appState.players[activeSessionPlayer];
+            const strId = String(id);
+
+            if (!playerObj.completions.includes(strId)) {
+                playerObj.completions.push(strId);
+            }
+            if (dateVal) {
+                playerObj.completionDates[strId] = dateVal;
             }
 
             input.value = '';
             tierInput.value = '';
+            dateInput.value = '';
             statusBox.style.display = 'none';
             await saveAndSyncCloudData();
         } catch (err) {
@@ -840,17 +950,65 @@
             alert("You must be logged into an account to modify victor records!");
             return;
         }
-        const comps = appState.players[activeSessionPlayer].completions;
+        ensurePlayerObjects();
+        const playerObj = appState.players[activeSessionPlayer];
+        const comps = playerObj.completions;
         const strId = String(levelId);
         const idx = comps.indexOf(strId);
 
         if (idx > -1) {
             comps.splice(idx, 1);
+            if (playerObj.completionDates) {
+                delete playerObj.completionDates[strId];
+            }
         } else {
+            const dateInput = prompt("Enter completion date (YYYY-MM-DD) or leave blank for '?':", "");
+            if (dateInput === null) return; // cancelled
             comps.push(strId);
+            const trimmed = dateInput.trim();
+            if (trimmed && trimmed !== '?') {
+                playerObj.completionDates[strId] = trimmed;
+            } else {
+                delete playerObj.completionDates[strId];
+            }
         }
 
         await saveAndSyncCloudData();
+    }
+
+    function changeCompletionDate(levelId, event) {
+        event.stopPropagation();
+        if (!activeSessionPlayer) return;
+        ensurePlayerObjects();
+        const playerObj = appState.players[activeSessionPlayer];
+        const strId = String(levelId);
+        const current = (playerObj.completionDates && playerObj.completionDates[strId]) ? playerObj.completionDates[strId] : "";
+
+        const newDate = prompt("Enter new completion date (YYYY-MM-DD), or leave empty for '?':", current);
+        if (newDate === null) return; // User cancelled prompt
+
+        const trimmed = newDate.trim();
+        if (trimmed === "" || trimmed === "?") {
+            delete playerObj.completionDates[strId];
+        } else {
+            playerObj.completionDates[strId] = trimmed;
+        }
+
+        saveAndSyncCloudData();
+    }
+
+    function applyDatePickerChange(inputEl) {
+        if (!activeSessionPlayer || !pendingDateChangeLevelId) return;
+        ensurePlayerObjects();
+        const playerObj = appState.players[activeSessionPlayer];
+        const val = inputEl.value.trim();
+        if (val) {
+            playerObj.completionDates[pendingDateChangeLevelId] = val;
+        } else {
+            delete playerObj.completionDates[pendingDateChangeLevelId];
+        }
+        pendingDateChangeLevelId = null;
+        saveAndSyncCloudData();
     }
 
     function getDifficultyBadgeHtml(diffStr) {
@@ -878,8 +1036,26 @@
         return Boolean(
             activeSessionPlayer &&
             appState.players[activeSessionPlayer] &&
+            appState.players[activeSessionPlayer].completions &&
             appState.players[activeSessionPlayer].completions.includes(String(levelId))
         );
+    }
+
+    function getCardActionButtonsHtml(levelId, beaten) {
+        if (!activeSessionPlayer) return '';
+        const changeDateBtn = beaten ? `
+            <button class="completion-action-btn change-date-btn" onclick="changeCompletionDate('${levelId}', event)">
+                Change Completion Date
+            </button>
+        ` : '';
+        return `
+            <div class="action-btn-group">
+                ${changeDateBtn}
+                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${levelId}', event)">
+                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
+                </button>
+            </div>
+        `;
     }
 
     function renderCurrentActiveList() {
@@ -968,7 +1144,7 @@
             const victors = getVictorsForLevel(lvl.id);
             if (victors.length === 0) return false;
             // Level appears if at least one currently checked player is among its victors
-            return victors.some(v => activeSelectedPlayers.includes(v));
+            return victors.some(v => activeSelectedPlayers.includes(v.name));
         });
 
         // 2. Hide My Completions Filter
@@ -1003,18 +1179,13 @@
             const media = getLevelMedia(lvl);
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
+            const victorsTableHtml = renderVictorsTableHtml(victors);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
 
             const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
-
-            const actionBtnHtml = activeSessionPlayer ? `
-                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">
-                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
-                </button>
-            ` : '';
+            const actionBtnHtml = getCardActionButtonsHtml(lvl.id, beaten);
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}">
@@ -1032,7 +1203,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
-                        <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
+                        ${victorsTableHtml}
                         <div class="level-meta">
                             <div class="badge-group">
                                 <span class="badge badge-diff">${diffBadgeHtml}</span>
@@ -1097,15 +1268,10 @@
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
+            const victorsTableHtml = renderVictorsTableHtml(victors);
 
             const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
-
-            const actionBtnHtml = activeSessionPlayer ? `
-                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">
-                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
-                </button>
-            ` : '';
+            const actionBtnHtml = getCardActionButtonsHtml(lvl.id, beaten);
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}">
@@ -1123,7 +1289,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
-                        <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
+                        ${victorsTableHtml}
                         <div class="level-meta">
                             <div class="badge-group">
                                 <span class="badge badge-diff">${diffBadgeHtml}</span>
@@ -1165,15 +1331,10 @@
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsHtml = victors.length > 0 ? victors.map(v => `<span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v)}'; switchView('stats')">${escapeHtml(v)}</span>`).join('') : '<span style="font-size:0.75rem; font-style:italic;">None</span>';
+            const victorsTableHtml = renderVictorsTableHtml(victors);
 
             const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
-
-            const actionBtnHtml = activeSessionPlayer ? `
-                <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${lvl.id}', event)">
-                    ${beaten ? '- Remove Completion' : '+ Mark Complete'}
-                </button>
-            ` : '';
+            const actionBtnHtml = getCardActionButtonsHtml(lvl.id, beaten);
 
             return `
                 <article class="level-card ${rankClass} ${beaten ? 'beaten-level' : ''}">
@@ -1191,7 +1352,7 @@
                             <span class="level-name">${escapeHtml(lvl.name)}</span>
                             <span class="level-creator">by ${escapeHtml(lvl.creator)}</span>
                         </div>
-                        <div class="victor-row"><span class="victor-label">Victors:</span> ${victorsHtml}</div>
+                        ${victorsTableHtml}
                         <div class="level-meta">
                             <div class="badge-group">
                                 <span class="badge badge-diff">${diffBadgeHtml}</span>
