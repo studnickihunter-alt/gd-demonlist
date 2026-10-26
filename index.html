@@ -262,38 +262,27 @@
             align-items: center;
         }
         .victor-col-date {
-            padding: 4px 8px;
+            padding: 3px 6px;
             width: 100%;
             text-align: center;
             font-weight: 600;
             color: var(--text-muted);
             font-size: 0.72rem;
             white-space: nowrap;
-            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
         }
-        .victor-col-date.editable-date {
-            cursor: pointer;
-            color: var(--accent);
-            font-weight: 700;
-        }
-        .victor-col-date.editable-date:hover {
-            background: rgba(0, 102, 204, 0.1);
-            text-decoration: underline;
-        }
         .inline-date-picker-input {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
+            padding: 2px 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: var(--bg-card);
+            color: var(--text-main);
             cursor: pointer;
-            margin: 0;
-            padding: 0;
-            border: none;
+            height: 24px;
         }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
@@ -469,6 +458,14 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
+
+    function getTodayDateString() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
     function toggleFilterDropdown(event) {
         event.stopPropagation();
@@ -856,8 +853,7 @@
             const currentVal = v.date ? escapeHtml(v.date) : '';
 
             const dateCellHtml = isMe ? `
-                <div class="victor-col-date editable-date" title="Click to change completion date" onclick="openInlineDatePicker(this, event)">
-                    <span>${displayDate}</span>
+                <div class="victor-col-date" onclick="event.stopPropagation()">
                     <input type="date" class="inline-date-picker-input" value="${currentVal}" onchange="updateVictorDate('${escapeHtml(levelId)}', this.value)" onclick="event.stopPropagation()">
                 </div>
             ` : `
@@ -882,21 +878,6 @@
                 </div>
             </div>
         `;
-    }
-
-    function openInlineDatePicker(cellEl, event) {
-        event.stopPropagation();
-        const input = cellEl.querySelector('input[type="date"]');
-        if (input && typeof input.showPicker === 'function') {
-            try {
-                input.showPicker();
-            } catch (err) {
-                input.focus();
-            }
-        } else if (input) {
-            input.focus();
-            input.click();
-        }
     }
 
     function updateVictorDate(levelId, newDateVal) {
@@ -1027,6 +1008,7 @@
             }
         } else {
             comps.push(strId);
+            playerObj.completionDates[strId] = getTodayDateString();
         }
 
         await saveAndSyncCloudData();
