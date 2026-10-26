@@ -233,38 +233,74 @@
         @media(min-width: 600px) { .level-name { font-size: 1.35rem; } }
         .level-creator { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-style: italic; }
 
-        .victor-section { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
-        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; color: var(--text-muted); }
-        .victor-table {
-            width: 100%;
-            max-width: 320px;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-            background: rgba(0, 0, 0, 0.03);
+        .victor-section { margin-top: 8px; display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+        .victor-label { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; }
+        .victor-columns-container {
+            display: inline-flex;
+            flex-wrap: wrap;
             border: 1px solid var(--border);
             border-radius: 4px;
+            background: rgba(0, 0, 0, 0.03);
             overflow: hidden;
         }
-        [data-theme="dark"] .victor-table { background: rgba(255, 255, 255, 0.03); }
-        .victor-table th, .victor-table td {
+        [data-theme="dark"] .victor-columns-container { background: rgba(255, 255, 255, 0.03); }
+        .victor-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid var(--border);
+            min-width: 75px;
+        }
+        .victor-column:last-child { border-right: none; }
+        .victor-col-name {
             padding: 4px 8px;
-            text-align: left;
             border-bottom: 1px solid var(--border);
+            width: 100%;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .victor-table th {
-            font-size: 0.65rem;
-            text-transform: uppercase;
+        .victor-col-date {
+            padding: 4px 8px;
+            width: 100%;
+            text-align: center;
+            font-weight: 600;
             color: var(--text-muted);
-            background: rgba(0, 0, 0, 0.05);
+            font-size: 0.72rem;
+            white-space: nowrap;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .victor-table tr:last-child td { border-bottom: none; }
+        .victor-col-date.editable-date {
+            cursor: pointer;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .victor-col-date.editable-date:hover {
+            background: rgba(0, 102, 204, 0.1);
+            text-decoration: underline;
+        }
+        .inline-date-picker-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
         .victor-tag {
             background-color: rgba(43, 138, 62, 0.15); color: #2b8a3e; font-weight: 700;
             padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; cursor: pointer; display: inline-block;
         }
         [data-theme="dark"] .victor-tag { background-color: rgba(64, 192, 87, 0.18); color: #69db7c; }
         .victor-tag:hover { text-decoration: underline; }
-        .victor-date-cell { font-weight: 600; color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; }
 
         .level-meta { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
         .badge-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -279,9 +315,6 @@
         }
         .completion-action-btn.is-beaten {
             background-color: var(--danger);
-        }
-        .completion-action-btn.change-date-btn {
-            background-color: var(--accent);
         }
         .completion-action-btn:hover { opacity: 0.9; }
 
@@ -413,9 +446,6 @@
     </div>
 </div>
 
-<!-- Hidden date picker for updating completion dates directly -->
-<input type="date" id="hiddenDatePicker" style="display:none;" onchange="applyDatePickerChange(this)">
-
 <script>
     const BIN_ID = '6adc18bcffd5d1605387610c';
     const JSONBIN_API_KEY = '$2a$10$Q4c9o4Yst0RiOqrR7gzl6OrsAcpz87H1seYKYQd2gvk92nuv8fq7e';
@@ -439,7 +469,6 @@
 
     let activeSessionPlayer = sessionStorage.getItem('active_session_player') || null;
     let lockedBackgroundUrl = null;
-    let pendingDateChangeLevelId = null;
 
     function toggleFilterDropdown(event) {
         event.stopPropagation();
@@ -800,7 +829,7 @@
             }
         }
 
-        // Sort: oldest at top, newest at bottom, no completion date (?) at the very bottom
+        // Sort: oldest first, newest after, no completion date (?) at the very end
         victors.sort((a, b) => {
             if (!a.date && !b.date) return a.name.localeCompare(b.name);
             if (!a.date) return 1;
@@ -817,36 +846,71 @@
         return victors;
     }
 
-    function renderVictorsTableHtml(victors) {
+    function renderVictorsTableHtml(victors, levelId) {
         if (victors.length === 0) {
             return '<div class="victor-section"><span class="victor-label">Victors: None</span></div>';
         }
-        const rows = victors.map(v => {
+        const cols = victors.map(v => {
             const displayDate = v.date ? escapeHtml(v.date) : '?';
+            const isMe = activeSessionPlayer && v.name === activeSessionPlayer;
+            const currentVal = v.date ? escapeHtml(v.date) : '';
+
+            const dateCellHtml = isMe ? `
+                <div class="victor-col-date editable-date" title="Click to change completion date" onclick="openInlineDatePicker(this, event)">
+                    <span>${displayDate}</span>
+                    <input type="date" class="inline-date-picker-input" value="${currentVal}" onchange="updateVictorDate('${escapeHtml(levelId)}', this.value)" onclick="event.stopPropagation()">
+                </div>
+            ` : `
+                <div class="victor-col-date">${displayDate}</div>
+            `;
+
             return `
-                <tr>
-                    <td><span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v.name)}'; switchView('stats')">${escapeHtml(v.name)}</span></td>
-                    <td class="victor-date-cell">${displayDate}</td>
-                </tr>
+                <div class="victor-column">
+                    <div class="victor-col-name">
+                        <span class="victor-tag" onclick="event.stopPropagation(); appState.viewingPlayer='${escapeHtml(v.name)}'; switchView('stats')">${escapeHtml(v.name)}</span>
+                    </div>
+                    ${dateCellHtml}
+                </div>
             `;
         }).join('');
 
         return `
             <div class="victor-section">
                 <span class="victor-label">Victors:</span>
-                <table class="victor-table">
-                    <thead>
-                        <tr>
-                            <th>Victor</th>
-                            <th>Completion Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
+                <div class="victor-columns-container">
+                    ${cols}
+                </div>
             </div>
         `;
+    }
+
+    function openInlineDatePicker(cellEl, event) {
+        event.stopPropagation();
+        const input = cellEl.querySelector('input[type="date"]');
+        if (input && typeof input.showPicker === 'function') {
+            try {
+                input.showPicker();
+            } catch (err) {
+                input.focus();
+            }
+        } else if (input) {
+            input.focus();
+            input.click();
+        }
+    }
+
+    function updateVictorDate(levelId, newDateVal) {
+        if (!activeSessionPlayer) return;
+        ensurePlayerObjects();
+        const playerObj = appState.players[activeSessionPlayer];
+        const strId = String(levelId);
+        const trimmed = (newDateVal || '').trim();
+        if (trimmed) {
+            playerObj.completionDates[strId] = trimmed;
+        } else {
+            delete playerObj.completionDates[strId];
+        }
+        saveAndSyncCloudData();
     }
 
     function sortLevelsHardestFirst() {
@@ -962,53 +1026,10 @@
                 delete playerObj.completionDates[strId];
             }
         } else {
-            const dateInput = prompt("Enter completion date (YYYY-MM-DD) or leave blank for '?':", "");
-            if (dateInput === null) return; // cancelled
             comps.push(strId);
-            const trimmed = dateInput.trim();
-            if (trimmed && trimmed !== '?') {
-                playerObj.completionDates[strId] = trimmed;
-            } else {
-                delete playerObj.completionDates[strId];
-            }
         }
 
         await saveAndSyncCloudData();
-    }
-
-    function changeCompletionDate(levelId, event) {
-        event.stopPropagation();
-        if (!activeSessionPlayer) return;
-        ensurePlayerObjects();
-        const playerObj = appState.players[activeSessionPlayer];
-        const strId = String(levelId);
-        const current = (playerObj.completionDates && playerObj.completionDates[strId]) ? playerObj.completionDates[strId] : "";
-
-        const newDate = prompt("Enter new completion date (YYYY-MM-DD), or leave empty for '?':", current);
-        if (newDate === null) return; // User cancelled prompt
-
-        const trimmed = newDate.trim();
-        if (trimmed === "" || trimmed === "?") {
-            delete playerObj.completionDates[strId];
-        } else {
-            playerObj.completionDates[strId] = trimmed;
-        }
-
-        saveAndSyncCloudData();
-    }
-
-    function applyDatePickerChange(inputEl) {
-        if (!activeSessionPlayer || !pendingDateChangeLevelId) return;
-        ensurePlayerObjects();
-        const playerObj = appState.players[activeSessionPlayer];
-        const val = inputEl.value.trim();
-        if (val) {
-            playerObj.completionDates[pendingDateChangeLevelId] = val;
-        } else {
-            delete playerObj.completionDates[pendingDateChangeLevelId];
-        }
-        pendingDateChangeLevelId = null;
-        saveAndSyncCloudData();
     }
 
     function getDifficultyBadgeHtml(diffStr) {
@@ -1043,14 +1064,8 @@
 
     function getCardActionButtonsHtml(levelId, beaten) {
         if (!activeSessionPlayer) return '';
-        const changeDateBtn = beaten ? `
-            <button class="completion-action-btn change-date-btn" onclick="changeCompletionDate('${levelId}', event)">
-                Change Completion Date
-            </button>
-        ` : '';
         return `
             <div class="action-btn-group">
-                ${changeDateBtn}
                 <button class="completion-action-btn ${beaten ? 'is-beaten' : ''}" onclick="toggleVictorDirect('${levelId}', event)">
                     ${beaten ? '- Remove Completion' : '+ Mark Complete'}
                 </button>
@@ -1179,7 +1194,7 @@
             const media = getLevelMedia(lvl);
             const pts = getLevelPoints(lvl);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsTableHtml = renderVictorsTableHtml(victors);
+            const victorsTableHtml = renderVictorsTableHtml(victors, lvl.id);
             const diffBadgeHtml = getDifficultyBadgeHtml(lvl.difficulty || 'Easy Demon');
             const rankClass = getRankBgClass(rank);
             const beaten = isBeatenByActiveUser(lvl.id);
@@ -1268,7 +1283,7 @@
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsTableHtml = renderVictorsTableHtml(victors);
+            const victorsTableHtml = renderVictorsTableHtml(victors, lvl.id);
 
             const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
             const actionBtnHtml = getCardActionButtonsHtml(lvl.id, beaten);
@@ -1331,7 +1346,7 @@
             const rankClass = getRankBgClass(personalRank);
             const beaten = isBeatenByActiveUser(lvl.id);
             const victors = getVictorsForLevel(lvl.id);
-            const victorsTableHtml = renderVictorsTableHtml(victors);
+            const victorsTableHtml = renderVictorsTableHtml(victors, lvl.id);
 
             const checkHtml = beaten ? `<img class="check-overlay" src="check.png" alt="Completed">` : '';
             const actionBtnHtml = getCardActionButtonsHtml(lvl.id, beaten);
